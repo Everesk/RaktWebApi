@@ -1,5 +1,6 @@
 ﻿using RaktWebApi.Mappers;
 using RaktWebApi.Models;
+using System.Threading;
 
 namespace RaktWebApi.Services;
 
@@ -9,24 +10,36 @@ namespace RaktWebApi.Services;
 public class EventService : IEventService
 {
     private readonly List<Event> events = [];
-    
+    private readonly Lock _lock = new();
+
     /// <summary>
     /// Возвращает все события.
     /// </summary>
-    public IEnumerable<Event> GetAll() => events;
+    public IEnumerable<Event> GetAll()
+    {
+        using (_lock.EnterScope()) return events.ToList();
+    }
 
     /// <summary>
     /// Возвращает событие по идентификатору.
     /// </summary>
-    public Event? GetById(Guid id) => events.FirstOrDefault(e => e.Id == id);
-    
+    public Event? GetById(Guid id)
+    {
+        using (_lock.EnterScope()) return events.FirstOrDefault(e => e.Id == id);
+    }
+
     /// <summary>
     /// Создает новое событие.
     /// </summary>
     public Event Create(CreateEventDto dto)
     {
         var entity = dto.CreateFromDto();
-        events.Add(entity);
+
+        using (_lock.EnterScope())
+        {
+            events.Add(entity);
+        }
+
         return entity;
     }
 
@@ -35,12 +48,15 @@ public class EventService : IEventService
     /// </summary>
     public bool Update(Guid id, UpdateEventDto dto)
     {
-        var existingEvent = GetById(id);
+        using (_lock.EnterScope())
+        {
+            var existingEvent = events.FirstOrDefault(e => e.Id == id);
 
-        if (existingEvent is null) return false;
-        
-        existingEvent.UpdateFromDto(dto);
-        return true;
+            if (existingEvent is null) return false;
+
+            existingEvent.UpdateFromDto(dto);
+            return true;
+        }
     }
 
     /// <summary>
@@ -48,10 +64,13 @@ public class EventService : IEventService
     /// </summary>
     public bool Delete(Guid id)
     {
-        var existingEvent = GetById(id);
+        using (_lock.EnterScope())
+        {
+            var existingEvent = events.FirstOrDefault(e => e.Id == id);
 
-        if (existingEvent is null) return false;
+            if (existingEvent is null) return false;
 
-        return events.Remove(existingEvent);
+            return events.Remove(existingEvent);
+        }
     }
 }
