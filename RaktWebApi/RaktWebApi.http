@@ -41,7 +41,15 @@ Content-Type: application/json
 ###
 
 
-
 ### Удалить событие
 DELETE {{host}}/events/{{id}}
 ###
+
+### Должно быть 405
+PATCH {{host}}/events/{{id}}
+###
+
+### Должно быть 404
+GET {{host}}/event
+###
+

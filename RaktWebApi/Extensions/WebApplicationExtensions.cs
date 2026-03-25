@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
+using RaktWebApi.Common;
 
 namespace RaktWebApi.Extensions;
 
@@ -8,6 +8,7 @@ public static class WebApplicationExtensions
     public static WebApplication UseStandardConfiguration(this WebApplication app)
     {
         app.UseGlobalExceptionHandler(); // Глобальный обработчик исключений
+        app.UseDefaultStatusCodePages(); // Переопределим некоторые статусные ошибки на ProblemDetails
 
         if (app.Environment.IsDevelopment())
         {
@@ -21,7 +22,9 @@ public static class WebApplicationExtensions
 
         return app;
     }
-
+    /// <summary>
+    /// Добавляет глобальный обработчик исключений, который перехватывает все необработанные исключения,
+    /// </summary>
     public static WebApplication UseGlobalExceptionHandler(this WebApplication app)
     {
         app.UseExceptionHandler(exceptionHandlerApp =>
@@ -43,21 +46,50 @@ public static class WebApplicationExtensions
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 context.Response.ContentType = "application/problem+json";
 
-                var problemDetails = new ProblemDetails
-                {
-                    Title = "Внутренняя ошибка сервера",
-                    Detail = $"Произошла непредвиденная ошибка на сервере: {exception?.Message}",
-                    Status = StatusCodes.Status500InternalServerError,
-                    Type = null,
-                    Instance = context.Request.Path,
-                    Extensions =
-                    {
-                        ["traceId"] = context.TraceIdentifier
-                    }
-                };
-
+                var problemDetails = ProblemDetailsHelper.InternalError(context, exception);
                 await context.Response.WriteAsJsonAsync(problemDetails);
             });
+        });
+
+        return app;
+    }
+
+    /// <summary>
+    /// Добавляем ProblemDetails для некоторых кодов ошибок.
+    /// </summary>
+    public static WebApplication UseDefaultStatusCodePages(this WebApplication app)
+    {
+        app.UseStatusCodePages(async statusCodeContext =>
+        {
+            var httpContext = statusCodeContext.HttpContext;
+            var response = httpContext.Response;
+
+            if (response.StatusCode is not (
+                StatusCodes.Status404NotFound or
+                StatusCodes.Status405MethodNotAllowed))
+            {
+                return;
+            }
+
+            response.ContentType = "application/problem+json";
+
+            var problemDetails = response.StatusCode switch
+            {
+                StatusCodes.Status404NotFound =>
+                    ProblemDetailsHelper.NotFound(httpContext),
+
+                StatusCodes.Status405MethodNotAllowed =>
+                    ProblemDetailsHelper.Create(httpContext,StatusCodes.Status405MethodNotAllowed, "Метод не поддерживается"),
+
+                _ => null
+            };
+
+            if (problemDetails is null)
+                return;
+
+            problemDetails.Extensions["traceId"] = httpContext.TraceIdentifier;
+
+            await response.WriteAsJsonAsync(problemDetails);
         });
 
         return app;

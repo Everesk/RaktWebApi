@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using System.Reflection;
+using RaktWebApi.Common;
 
 namespace RaktWebApi.Extensions;
 
@@ -61,22 +60,13 @@ public static class WebApplicationBuilderExtensions
         {
             options.InvalidModelStateResponseFactory = context =>
             {
-                var problemDetails = new ValidationProblemDetails(context.ModelState)
-                {
-                    Title = "Ошибка валидации",
-                    Status = StatusCodes.Status400BadRequest,
-                    Type = null,
-                    Instance = context.HttpContext.Request.Path,
-                    Extensions =
-                    {
-                        ["traceId"] = context.HttpContext.TraceIdentifier
-                    }
-                };
-
-                return new BadRequestObjectResult(problemDetails);
+                var problem = ProblemDetailsHelper.Validation(context.HttpContext, context.ModelState);
+                return new BadRequestObjectResult(problem);
             };
         });
 
         return builder;
     }
+
+
 }

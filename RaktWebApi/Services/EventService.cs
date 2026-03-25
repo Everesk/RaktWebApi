@@ -1,6 +1,5 @@
 ﻿using RaktWebApi.Mappers;
 using RaktWebApi.Models;
-using System.Threading;
 
 namespace RaktWebApi.Services;
 

@@ -10,7 +10,7 @@ namespace RaktWebApi.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class EventsController(ILogger<EventsController> logger, IEventService eventService) : ControllerBase
+public class EventsController(ILogger<EventsController> logger, IEventService eventService) : ApiControllerBase
 {
     /// <summary>
     /// Возвращает список всех событий.
@@ -26,7 +26,7 @@ public class EventsController(ILogger<EventsController> logger, IEventService ev
     {
         var entity = eventService.GetById(id);
 
-        if (entity is null) return NotFound();
+        if (entity is null) return NotFoundProblem($"Событие с идентификатором '{id}' не найдено.");
 
         return Ok(entity);
     }
@@ -52,7 +52,7 @@ public class EventsController(ILogger<EventsController> logger, IEventService ev
     {
         var updated = eventService.Update(id, dto);
 
-        if (!updated) return NotFound();
+        if (!updated) return NotFoundProblem($"Событие с идентификатором '{id}' не найдено.");
 
         logger.LogInformation("Обновлено событие с Id {Id}", id);
 
@@ -67,7 +67,7 @@ public class EventsController(ILogger<EventsController> logger, IEventService ev
     {
         var deleted = eventService.Delete(id);
 
-        if (!deleted) return NotFound();
+        if (!deleted) return NotFoundProblem($"Событие с идентификатором '{id}' не найдено.");
 
         logger.LogInformation("Удалено событие с Id {Id}", id);
 
