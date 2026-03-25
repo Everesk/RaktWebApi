@@ -22,7 +22,7 @@ Content-Type: application/json
 {
 "title": "Встреча команды",
 "description": "Обсуждение спринта",
-"startAt": "2026-03-24T10:00:00",
+"startAt": "2026-03-26T10:00:00",
 "endAt": "2026-03-25T11:00:00"
 }
 ###

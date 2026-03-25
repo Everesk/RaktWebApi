@@ -17,6 +17,8 @@ public class EventService : IEventService
     /// </summary>
     public IEnumerable<Event> GetAll()
     {
+        // throw new Exception("Проверка глобального обработчика");
+
         using (_lock.EnterScope()) return events.ToList();
     }
 
