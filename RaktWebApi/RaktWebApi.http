@@ -1,0 +1,6 @@
+@host = http://localhost:5007
+
+GET {{host}}/events/
+Accept: application/json
+
+###
