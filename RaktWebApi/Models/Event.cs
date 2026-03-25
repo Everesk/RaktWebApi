@@ -1,7 +1,7 @@
 ﻿namespace RaktWebApi.Models;
 
 /// <summary>
-/// Представляет событие (например, встречу или задачу) с временными рамками.
+/// Представляет событие.
 /// </summary>
 public class Event
 {
