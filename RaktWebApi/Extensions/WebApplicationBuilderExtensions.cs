@@ -21,7 +21,13 @@ public static class WebApplicationBuilderExtensions
         });
 
         builder.Services.AddControllers();
-        builder.Services.AddOpenApi();
+
+        // Swagger
+        if (builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
+        }
 
         return builder;
     }
