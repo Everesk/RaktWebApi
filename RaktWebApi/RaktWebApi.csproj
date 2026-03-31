@@ -8,13 +8,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.6" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.1.6" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.6" />
+    <Compile Remove="Новая папка\**" />
+    <Content Remove="Новая папка\**" />
+    <EmbeddedResource Remove="Новая папка\**" />
+    <None Remove="Новая папка\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Новая папка\" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.6" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.1.6" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.6" />
   </ItemGroup>
 
 </Project>

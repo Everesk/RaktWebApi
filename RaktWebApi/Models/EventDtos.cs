@@ -24,17 +24,17 @@ public class EventBaseDto : IValidatableObject
     /// Дата и время начала события.
     /// </summary>
     [Required(ErrorMessage = "Дата начала обязательна")]
-    public DateTime StartAt { get; set; }
+    public DateTime? StartAt { get; set; }
 
     /// <summary>
     /// Дата и время окончания события.
     /// </summary>
     [Required(ErrorMessage = "Дата окончания обязательна")]
-    public DateTime EndAt { get; set; }
+    public DateTime? EndAt { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (EndAt <= StartAt)
+        if (StartAt.HasValue && EndAt.HasValue && EndAt <= StartAt)
         {
             yield return new ValidationResult(
                 "Дата окончания должна быть больше даты начала",

@@ -35,12 +35,15 @@
 	Клонировать репозиторий:
 	git clone <ссылка-на-репозиторий>
 	Перейти в папку проекта:
-	cd RaktWebApi
-	Запустить приложение: dotnet run
+	cd RaktWebApi/RaktWebApi
+	Запустить приложение: 
+		1) Только http:  dotnet run  
+		2) http и https: dotnet run --launch-profile https
+
 
 После запуска в консоли будут выведены адреса:
 http://localhost:5007
-https://localhost:7006
+https://localhost:7130
 
 Swagger
 
