@@ -32,6 +32,12 @@ public class EventBaseDto : IValidatableObject
     [Required(ErrorMessage = "Дата окончания обязательна")]
     public DateTime? EndAt { get; set; }
 
+
+    /// <summary>
+    /// Дополнительная валидация - проверка что время начала не позже времени конца
+    /// </summary>
+    /// <param name="validationContext"></param>
+    /// <returns></returns>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (StartAt.HasValue && EndAt.HasValue && EndAt <= StartAt)

@@ -3,8 +3,15 @@ using RaktWebApi.Common;
 
 namespace RaktWebApi.Extensions;
 
+/// <summary>
+/// Упрощает код Program.cs
+/// </summary>
 public static class WebApplicationExtensions
 {
+
+    /// <summary>
+    /// Стандартные настройки приложения
+    /// </summary>
     public static WebApplication UseStandardConfiguration(this WebApplication app)
     {
         app.UseGlobalExceptionHandler(); // Глобальный обработчик исключений

@@ -30,7 +30,11 @@ public class Event
     /// </summary>
     public DateTime EndAt { get; private set; }
 
-    public Event(string title, string? description, DateTime startAt, DateTime endAt)
+    /// <summary>
+    /// Основной конструктор
+    /// </summary>
+    
+    internal Event(string title, string? description, DateTime startAt, DateTime endAt)
     {
         Title = title;
         Description = description;
@@ -38,7 +42,10 @@ public class Event
         EndAt = endAt;
     }
 
-    public void Update(string title, string? description, DateTime startAt, DateTime endAt)
+    /// <summary>
+    /// Полностью обновляет все свойства
+    /// </summary>
+    internal void Update(string title, string? description, DateTime startAt, DateTime endAt)
     {
         Title = title;
         Description = description;
