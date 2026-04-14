@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using RaktWebApi.Common;
+using RaktWebApi.Data.Repositories;
 using RaktWebApi.Services;
 using Serilog;
 using Serilog.Events;
@@ -46,7 +47,8 @@ public static class WebApplicationBuilderExtensions
 
     private static WebApplicationBuilder AddServices(this WebApplicationBuilder builder)
     {
-        builder.Services.AddSingleton<IEventService, EventService>();
+        builder.Services.AddSingleton<IEventRepository, InMemoryEventRepository>();
+        builder.Services.AddScoped<IEventService, EventService>();
         return builder;
     }
 

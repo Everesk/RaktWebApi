@@ -1,26 +1,22 @@
 ﻿using RaktWebApi.Common.Exceptions;
+using RaktWebApi.Data.Repositories;
 using RaktWebApi.Mappers;
 using RaktWebApi.Models;
 
 namespace RaktWebApi.Services;
 
 /// <summary>
-/// Сервис для хранения событий в памяти.
+/// Сервис для управления событиями.
+/// Содержит бизнес-логику и координирует работу с репозиторием.
 /// </summary>
-public class EventService : IEventService
+public class EventService(IEventRepository repository) : IEventService
 {
-    private readonly List<Event> events = [];
-    private readonly Lock _lock = new();
-
     /// <summary>
     /// Возвращает все события.
     /// </summary>
     public IEnumerable<Event> GetAll()
     {
-        using (_lock.EnterScope())
-        {
-            return events.ToList();
-        }
+        return repository.GetAll();
     }
 
     /// <summary>
@@ -28,17 +24,14 @@ public class EventService : IEventService
     /// </summary>
     public Event GetById(Guid id)
     {
-        using (_lock.EnterScope())
+        var existingEvent = repository.GetById(id);
+
+        if (existingEvent is null)
         {
-            var existingEvent = events.FirstOrDefault(e => e.Id == id);
-
-            if (existingEvent is null)
-            {
-                throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
-            }
-
-            return existingEvent;
+            throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
         }
+
+        return existingEvent;
     }
 
     /// <summary>
@@ -47,12 +40,7 @@ public class EventService : IEventService
     public Event Create(CreateEventDto dto)
     {
         var entity = dto.CreateFromDto();
-
-        using (_lock.EnterScope())
-        {
-            events.Add(entity);
-        }
-
+        repository.Add(entity);
         return entity;
     }
 
@@ -61,17 +49,14 @@ public class EventService : IEventService
     /// </summary>
     public void Update(Guid id, UpdateEventDto dto)
     {
-        using (_lock.EnterScope())
+        var existingEvent = repository.GetById(id);
+
+        if (existingEvent is null)
         {
-            var existingEvent = events.FirstOrDefault(e => e.Id == id);
-
-            if (existingEvent is null)
-            {
-                throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
-            }
-
-            existingEvent.UpdateFromDto(dto);
+            throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
         }
+
+        existingEvent.UpdateFromDto(dto);
     }
 
     /// <summary>
@@ -79,16 +64,13 @@ public class EventService : IEventService
     /// </summary>
     public void Delete(Guid id)
     {
-        using (_lock.EnterScope())
+        var existingEvent = repository.GetById(id);
+
+        if (existingEvent is null)
         {
-            var existingEvent = events.FirstOrDefault(e => e.Id == id);
-
-            if (existingEvent is null)
-            {
-                throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
-            }
-
-            events.Remove(existingEvent);
+            throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
         }
+
+        repository.Delete(existingEvent);
     }
 }

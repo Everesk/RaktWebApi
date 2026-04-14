@@ -1,5 +1,5 @@
 @host = http://localhost:5007
-@id = f0fdacf0-d120-42d3-a17c-92f3157f39c2
+@id = 23bca9a2-156d-414c-8ee3-b11658e187bb
 
 ### Получить все события
 GET {{host}}/events
@@ -23,7 +23,7 @@ Content-Type: application/json
 "title": "Встреча команды",
 "description": "Обсуждение спринта",
 "startAt": "2026-03-23T10:00:00",
-"endAt": "2026-02-25T11:00:00"
+"endAt": "2026-04-25T11:00:00"
 }
 ###
 
