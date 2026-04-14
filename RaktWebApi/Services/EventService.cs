@@ -10,15 +10,8 @@ namespace RaktWebApi.Services;
 /// Сервис для управления событиями.
 /// Содержит бизнес-логику и координирует работу с репозиторием.
 /// </summary>
-public class EventService : IEventService
+public class EventService(IEventRepository repository) : IEventService
 {
-    private readonly IEventRepository repository;
-
-    public EventService(IEventRepository repository)
-    {
-        this.repository = repository;
-    }
-
     /// <summary>
     /// Возвращает список событий с учетом фильтров и пагинации.
     /// </summary>
@@ -86,12 +79,7 @@ public class EventService : IEventService
     {
         var existingEvent = repository.GetById(id);
 
-        if (existingEvent is null)
-        {
-            throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
-        }
-
-        return existingEvent;
+        return existingEvent ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
     }
 
     /// <summary>
@@ -109,13 +97,7 @@ public class EventService : IEventService
     /// </summary>
     public void Update(Guid id, UpdateEventDto dto)
     {
-        var existingEvent = repository.GetById(id);
-
-        if (existingEvent is null)
-        {
-            throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
-        }
-
+        var existingEvent = repository.GetById(id) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
         existingEvent.UpdateFromDto(dto);
     }
 
@@ -124,13 +106,7 @@ public class EventService : IEventService
     /// </summary>
     public void Delete(Guid id)
     {
-        var existingEvent = repository.GetById(id);
-
-        if (existingEvent is null)
-        {
-            throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
-        }
-
+        var existingEvent = repository.GetById(id) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
         repository.Delete(existingEvent);
     }
 }
