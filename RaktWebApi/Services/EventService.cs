@@ -1,4 +1,5 @@
-﻿using RaktWebApi.Mappers;
+﻿using RaktWebApi.Common.Exceptions;
+using RaktWebApi.Mappers;
 using RaktWebApi.Models;
 
 namespace RaktWebApi.Services;
@@ -16,17 +17,28 @@ public class EventService : IEventService
     /// </summary>
     public IEnumerable<Event> GetAll()
     {
-        // throw new Exception("Проверка глобального обработчика");
-
-        using (_lock.EnterScope()) return events.ToList();
+        using (_lock.EnterScope())
+        {
+            return events.ToList();
+        }
     }
 
     /// <summary>
     /// Возвращает событие по идентификатору.
     /// </summary>
-    public Event? GetById(Guid id)
+    public Event GetById(Guid id)
     {
-        using (_lock.EnterScope()) return events.FirstOrDefault(e => e.Id == id);
+        using (_lock.EnterScope())
+        {
+            var existingEvent = events.FirstOrDefault(e => e.Id == id);
+
+            if (existingEvent is null)
+            {
+                throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
+            }
+
+            return existingEvent;
+        }
     }
 
     /// <summary>
@@ -47,31 +59,36 @@ public class EventService : IEventService
     /// <summary>
     /// Обновляет существующее событие.
     /// </summary>
-    public bool Update(Guid id, UpdateEventDto dto)
+    public void Update(Guid id, UpdateEventDto dto)
     {
         using (_lock.EnterScope())
         {
             var existingEvent = events.FirstOrDefault(e => e.Id == id);
 
-            if (existingEvent is null) return false;
+            if (existingEvent is null)
+            {
+                throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
+            }
 
             existingEvent.UpdateFromDto(dto);
-            return true;
         }
     }
 
     /// <summary>
     /// Удаляет событие по идентификатору.
     /// </summary>
-    public bool Delete(Guid id)
+    public void Delete(Guid id)
     {
         using (_lock.EnterScope())
         {
             var existingEvent = events.FirstOrDefault(e => e.Id == id);
 
-            if (existingEvent is null) return false;
+            if (existingEvent is null)
+            {
+                throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
+            }
 
-            return events.Remove(existingEvent);
+            events.Remove(existingEvent);
         }
     }
 }

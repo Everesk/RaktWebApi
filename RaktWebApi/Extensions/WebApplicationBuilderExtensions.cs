@@ -25,9 +25,7 @@ public static class WebApplicationBuilderExtensions
         });
 
         builder.Services.AddControllers();
-
-        // Ошибки в ProblemDetails
-        builder.AddDefaultProblemDetails();
+        builder.Services.AddProblemDetails();
 
         // Swagger
         if (builder.Environment.IsDevelopment())
@@ -48,7 +46,7 @@ public static class WebApplicationBuilderExtensions
 
     private static WebApplicationBuilder AddServices(this WebApplicationBuilder builder)
     {
-        builder.Services.AddScoped<IEventService, EventService>();
+        builder.Services.AddSingleton<IEventService, EventService>();
         return builder;
     }
 
@@ -83,33 +81,4 @@ public static class WebApplicationBuilderExtensions
 
         return builder;
     }
-
-    /// <summary>
-    /// Кастомная обработка ошибок валидации
-    /// </summary>
-    public static WebApplicationBuilder AddDefaultProblemDetails(this WebApplicationBuilder builder)
-    {
-        builder.Services.AddProblemDetails(options =>
-        {
-            options.CustomizeProblemDetails = context =>
-            {
-                context.ProblemDetails.Extensions["traceId"] =
-                    context.HttpContext.TraceIdentifier;
-            };
-        });
-
-        //Ошибки валидации
-        builder.Services.Configure<ApiBehaviorOptions>(options =>
-        {
-            options.InvalidModelStateResponseFactory = context =>
-            {
-                var problem = ProblemDetailsHelper.Validation(context.HttpContext, context.ModelState);
-                return new BadRequestObjectResult(problem);
-            };
-        });
-
-        return builder;
-    }
-
-
 }

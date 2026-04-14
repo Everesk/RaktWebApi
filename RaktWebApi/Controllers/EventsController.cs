@@ -5,18 +5,22 @@ using RaktWebApi.Services;
 namespace RaktWebApi.Controllers;
 
 /// <summary>
-/// Контроллер управления списком событий
+/// Контроллер управления списком событий.
 /// </summary>
-
 [ApiController]
 [Route("[controller]")]
-public class EventsController(ILogger<EventsController> logger, IEventService eventService) : ApiControllerBase
+public class EventsController(
+    ILogger<EventsController> logger,
+    IEventService eventService) : ApiControllerBase
 {
     /// <summary>
     /// Возвращает список всех событий.
     /// </summary>
     [HttpGet]
-    public ActionResult<IEnumerable<Event>> GetAll() => Ok(eventService.GetAll());
+    public ActionResult<IEnumerable<Event>> GetAll()
+    {
+        return Ok(eventService.GetAll());
+    }
 
     /// <summary>
     /// Возвращает событие по идентификатору.
@@ -25,8 +29,6 @@ public class EventsController(ILogger<EventsController> logger, IEventService ev
     public ActionResult<Event> GetById(Guid id)
     {
         var entity = eventService.GetById(id);
-
-        if (entity is null) return NotFoundProblem($"Событие с идентификатором '{id}' не найдено.");
 
         return Ok(entity);
     }
@@ -50,9 +52,7 @@ public class EventsController(ILogger<EventsController> logger, IEventService ev
     [HttpPut("{id:guid}")]
     public IActionResult Update(Guid id, [FromBody] UpdateEventDto dto)
     {
-        var updated = eventService.Update(id, dto);
-
-        if (!updated) return NotFoundProblem($"Событие с идентификатором '{id}' не найдено.");
+        eventService.Update(id, dto);
 
         logger.LogInformation("Обновлено событие с Id {Id}", id);
 
@@ -65,9 +65,7 @@ public class EventsController(ILogger<EventsController> logger, IEventService ev
     [HttpDelete("{id:guid}")]
     public IActionResult Delete(Guid id)
     {
-        var deleted = eventService.Delete(id);
-
-        if (!deleted) return NotFoundProblem($"Событие с идентификатором '{id}' не найдено.");
+        eventService.Delete(id);
 
         logger.LogInformation("Удалено событие с Id {Id}", id);
 

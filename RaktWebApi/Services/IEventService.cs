@@ -15,7 +15,7 @@ public interface IEventService
     /// <summary>
     /// Возвращает событие по идентификатору.
     /// </summary>
-    Event? GetById(Guid id);
+    Event GetById(Guid id);
 
     /// <summary>
     /// Создает новое событие.
@@ -25,10 +25,10 @@ public interface IEventService
     /// <summary>
     /// Обновляет существующее событие (полностью).
     /// </summary>
-    bool Update(Guid id, UpdateEventDto dto);
+    void Update(Guid id, UpdateEventDto dto);
 
     /// <summary>
     /// Удаляет событие по идентификатору.
     /// </summary>
-    bool Delete(Guid id);
+    void Delete(Guid id);
 }
