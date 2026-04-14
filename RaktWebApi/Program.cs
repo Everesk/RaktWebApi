@@ -1,13 +1,31 @@
-using RaktWebApi.Services;
 using RaktWebApi.Extensions;
+using Serilog;
 
-var builder = WebApplication.CreateBuilder(args);
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
-builder.AddStandardConfiguration();
-builder.Services.AddSingleton<IEventService, EventService>(); // Как синглтон, ведь события хранятся в памяти
+try
+{
+    Log.Information("Запуск приложения");
 
-var app = builder.Build();
+    var builder = WebApplication.CreateBuilder(args);
 
-app.UseStandardConfiguration();
+    builder.AddSerilogLogging();
+    builder.AddStandardConfiguration();
 
-app.Run();
+    var app = builder.Build();
+
+    app.UseStandardConfiguration();
+
+    app.Run();
+}
+catch (Exception exception)
+{
+    Log.Fatal(exception, "Приложение было аварийно остановлено");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.Reflection;
 using RaktWebApi.Common;
+using RaktWebApi.Services;
+using Serilog;
+using Serilog.Events;
+using System.Reflection;
 
 namespace RaktWebApi.Extensions;
 
@@ -37,6 +40,46 @@ public static class WebApplicationBuilderExtensions
                 options.IncludeXmlComments(xmlPath);
             });
         }
+
+        builder.AddServices();
+
+        return builder;
+    }
+
+    private static WebApplicationBuilder AddServices(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddScoped<IEventService, EventService>();
+        return builder;
+    }
+
+    /// <summary>
+    /// Настраивает Serilog как основной механизм логирования приложения.
+    /// </summary>
+    public static WebApplicationBuilder AddSerilogLogging(this WebApplicationBuilder builder)
+    {
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .WriteTo.Console()
+
+
+            .WriteTo.File(
+                path: "logs/log-.txt", // log-2026-04-14.txt
+                rollingInterval: RollingInterval.Day, // новый файл каждый день
+                retainedFileCountLimit: 7, // храним 7 файлов
+                fileSizeLimitBytes: 10_000_000, // 10 MB
+                rollOnFileSizeLimit: true,
+                shared: true,
+                outputTemplate:
+                "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] " +
+                "[{SourceContext}] " +
+                "{Message:lj}{NewLine}{Exception}"
+            )
+            .CreateLogger();
+        
+        builder.Host.UseSerilog();
 
         return builder;
     }

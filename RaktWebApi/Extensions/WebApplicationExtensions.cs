@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
 using RaktWebApi.Common;
+using Serilog;
 
 namespace RaktWebApi.Extensions;
 
@@ -14,6 +15,10 @@ public static class WebApplicationExtensions
     /// </summary>
     public static WebApplication UseStandardConfiguration(this WebApplication app)
     {
+
+        // Serilog-логирование HTTP-запросов.
+        app.UseSerilogRequestLogging();
+
         app.UseGlobalExceptionHandler(); // Глобальный обработчик исключений
         app.UseDefaultStatusCodePages(); // Переопределим некоторые статусные ошибки на ProblemDetails
 
