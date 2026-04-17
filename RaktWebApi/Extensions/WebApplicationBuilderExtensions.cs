@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using RaktWebApi.Data.Repositories;
+using RaktWebApi.Services;
+using Serilog;
+using Serilog.Events;
 using System.Reflection;
-using RaktWebApi.Common;
 
 namespace RaktWebApi.Extensions;
 
@@ -22,9 +24,7 @@ public static class WebApplicationBuilderExtensions
         });
 
         builder.Services.AddControllers();
-
-        // Ошибки в ProblemDetails
-        builder.AddDefaultProblemDetails();
+        builder.Services.AddProblemDetails();
 
         // Swagger
         if (builder.Environment.IsDevelopment())
@@ -38,35 +38,47 @@ public static class WebApplicationBuilderExtensions
             });
         }
 
+        builder.AddServices();
+
+        return builder;
+    }
+
+    private static WebApplicationBuilder AddServices(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<IEventRepository, InMemoryEventRepository>();
+        builder.Services.AddScoped<IEventService, EventService>();
         return builder;
     }
 
     /// <summary>
-    /// Кастомная обработка ошибок валидации
+    /// Настраивает Serilog как основной механизм логирования приложения.
     /// </summary>
-    public static WebApplicationBuilder AddDefaultProblemDetails(this WebApplicationBuilder builder)
+    public static WebApplicationBuilder AddSerilogLogging(this WebApplicationBuilder builder)
     {
-        builder.Services.AddProblemDetails(options =>
-        {
-            options.CustomizeProblemDetails = context =>
-            {
-                context.ProblemDetails.Extensions["traceId"] =
-                    context.HttpContext.TraceIdentifier;
-            };
-        });
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .WriteTo.Console()
 
-        //Ошибки валидации
-        builder.Services.Configure<ApiBehaviorOptions>(options =>
-        {
-            options.InvalidModelStateResponseFactory = context =>
-            {
-                var problem = ProblemDetailsHelper.Validation(context.HttpContext, context.ModelState);
-                return new BadRequestObjectResult(problem);
-            };
-        });
+
+            .WriteTo.File(
+                path: "logs/log-.txt", // log-2026-04-14.txt
+                rollingInterval: RollingInterval.Day, // новый файл каждый день
+                retainedFileCountLimit: 7, // храним 7 файлов
+                fileSizeLimitBytes: 10_000_000, // 10 MB
+                rollOnFileSizeLimit: true,
+                shared: true,
+                outputTemplate:
+                "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] " +
+                "[{SourceContext}] " +
+                "{Message:lj}{NewLine}{Exception}"
+            )
+            .CreateLogger();
+        
+        builder.Host.UseSerilog();
 
         return builder;
     }
-
-
 }

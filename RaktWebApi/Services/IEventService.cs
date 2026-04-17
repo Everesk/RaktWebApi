@@ -3,19 +3,19 @@
 namespace RaktWebApi.Services;
 
 /// <summary>
-/// Интерфейсм сервиса для работы с событиями.
+/// Интерфейс сервиса для управления событиями.
 /// </summary>
 public interface IEventService
 {
     /// <summary>
-    /// Возвращает все события.
+    /// Возвращает список событий с учетом фильтрации и пагинации.
     /// </summary>
-    IEnumerable<Event> GetAll();
+    PaginatedResult<Event> GetAll(EventQueryDto query);
 
     /// <summary>
     /// Возвращает событие по идентификатору.
     /// </summary>
-    Event? GetById(Guid id);
+    Event GetById(Guid id);
 
     /// <summary>
     /// Создает новое событие.
@@ -23,12 +23,12 @@ public interface IEventService
     Event Create(CreateEventDto dto);
 
     /// <summary>
-    /// Обновляет существующее событие (полностью).
+    /// Обновляет существующее событие.
     /// </summary>
-    bool Update(Guid id, UpdateEventDto dto);
+    void Update(Guid id, UpdateEventDto dto);
 
     /// <summary>
     /// Удаляет событие по идентификатору.
     /// </summary>
-    bool Delete(Guid id);
+    void Delete(Guid id);
 }

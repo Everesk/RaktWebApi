@@ -1,32 +1,84 @@
-﻿using RaktWebApi.Mappers;
+﻿using RaktWebApi.Common.Exceptions;
+using RaktWebApi.Data.Repositories;
+using RaktWebApi.Mappers;
 using RaktWebApi.Models;
 
 namespace RaktWebApi.Services;
 
 /// <summary>
-/// Сервис для хранения событий в памяти.
+/// Сервис для управления событиями.
+/// Содержит бизнес-логику и координирует работу с репозиторием.
 /// </summary>
-public class EventService : IEventService
+public class EventService(IEventRepository repository) : IEventService
 {
-    private readonly List<Event> events = [];
-    private readonly Lock _lock = new();
-
     /// <summary>
-    /// Возвращает все события.
+    /// Возвращает список событий с учетом фильтров и пагинации.
     /// </summary>
-    public IEnumerable<Event> GetAll()
+    public PaginatedResult<Event> GetAll(EventQueryDto query)
     {
-        // throw new Exception("Проверка глобального обработчика");
+        var events = repository.GetAll().AsQueryable(); // не обязательно конечно AsQueryable, но пускай будет на будущее
 
-        using (_lock.EnterScope()) return events.ToList();
+        // Фильтрация
+        if (!string.IsNullOrWhiteSpace(query.Title))
+        {
+            events = events.Where(e =>
+                e.Title.Contains(query.Title, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (query.From.HasValue)
+        {
+            events = events.Where(e => e.StartAt >= query.From.Value);
+        }
+
+        if (query.To.HasValue)
+        {
+            events = events.Where(e => e.EndAt <= query.To.Value);
+        }
+
+        var totalCount = events.Count();
+
+        // пагинация
+        if (query.Page.HasValue && query.PageSize.HasValue)
+        {
+            var page = query.Page.Value;
+            var pageSize = query.PageSize.Value;
+
+            var items = events
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new PaginatedResult<Event>
+            {
+                TotalCount = totalCount,
+                Items = items,
+                Page = page,
+                PageSize = pageSize,
+                CurrentCount = items.Count
+            };
+        }
+
+        // без пагинации (т.е. хотя бы один из параметров не указан)
+        var allItems = events.ToList();
+
+        return new PaginatedResult<Event>
+        {
+            TotalCount = totalCount,
+            Items = allItems,
+            Page = 1,
+            PageSize = allItems.Count,
+            CurrentCount = allItems.Count
+        };
     }
 
     /// <summary>
     /// Возвращает событие по идентификатору.
     /// </summary>
-    public Event? GetById(Guid id)
+    public Event GetById(Guid id)
     {
-        using (_lock.EnterScope()) return events.FirstOrDefault(e => e.Id == id);
+        var existingEvent = repository.GetById(id);
+
+        return existingEvent ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
     }
 
     /// <summary>
@@ -35,43 +87,25 @@ public class EventService : IEventService
     public Event Create(CreateEventDto dto)
     {
         var entity = dto.CreateFromDto();
-
-        using (_lock.EnterScope())
-        {
-            events.Add(entity);
-        }
-
+        repository.Add(entity);
         return entity;
     }
 
     /// <summary>
     /// Обновляет существующее событие.
     /// </summary>
-    public bool Update(Guid id, UpdateEventDto dto)
+    public void Update(Guid id, UpdateEventDto dto)
     {
-        using (_lock.EnterScope())
-        {
-            var existingEvent = events.FirstOrDefault(e => e.Id == id);
-
-            if (existingEvent is null) return false;
-
-            existingEvent.UpdateFromDto(dto);
-            return true;
-        }
+        var existingEvent = repository.GetById(id) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
+        existingEvent.UpdateFromDto(dto);
     }
 
     /// <summary>
     /// Удаляет событие по идентификатору.
     /// </summary>
-    public bool Delete(Guid id)
+    public void Delete(Guid id)
     {
-        using (_lock.EnterScope())
-        {
-            var existingEvent = events.FirstOrDefault(e => e.Id == id);
-
-            if (existingEvent is null) return false;
-
-            return events.Remove(existingEvent);
-        }
+        var existingEvent = repository.GetById(id) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
+        repository.Delete(existingEvent);
     }
 }

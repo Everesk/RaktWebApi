@@ -5,28 +5,41 @@ using RaktWebApi.Services;
 namespace RaktWebApi.Controllers;
 
 /// <summary>
-/// Контроллер управления списком событий
+/// Контроллер управления списком событий.
 /// </summary>
-
 [ApiController]
 [Route("[controller]")]
-public class EventsController(ILogger<EventsController> logger, IEventService eventService) : ApiControllerBase
+public class EventsController(
+    ILogger<EventsController> logger,
+    IEventService eventService) : ApiControllerBase
 {
     /// <summary>
-    /// Возвращает список всех событий.
+    /// Возвращает список событий с учетом фильтрации и пагинации.
     /// </summary>
+    /// <param name="query">Параметры фильтрации и пагинации событий.</param>
+    /// <returns>Постраничный список событий.</returns>
     [HttpGet]
-    public ActionResult<IEnumerable<Event>> GetAll() => Ok(eventService.GetAll());
+    [ProducesResponseType(typeof(PaginatedResult<Event>), StatusCodes.Status200OK)]
+    public ActionResult<PaginatedResult<Event>> GetAll([FromQuery] EventQueryDto query)
+    {
+        var events = eventService.GetAll(query);
+
+        logger.LogInformation("Запрошен список событий с параметрами: {@Query}", query);
+
+        return Ok(events);
+    }
 
     /// <summary>
     /// Возвращает событие по идентификатору.
     /// </summary>
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(Event), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public ActionResult<Event> GetById(Guid id)
     {
         var entity = eventService.GetById(id);
 
-        if (entity is null) return NotFoundProblem($"Событие с идентификатором '{id}' не найдено.");
+        logger.LogInformation("Запрошено событие с Id {Id}", entity.Id);
 
         return Ok(entity);
     }
@@ -35,6 +48,8 @@ public class EventsController(ILogger<EventsController> logger, IEventService ev
     /// Создает новое событие.
     /// </summary>
     [HttpPost]
+    [ProducesResponseType(typeof(Event), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public ActionResult<Event> Create([FromBody] CreateEventDto dto)
     {
         var created = eventService.Create(dto);
@@ -48,11 +63,12 @@ public class EventsController(ILogger<EventsController> logger, IEventService ev
     /// Обновляет существующее событие.
     /// </summary>
     [HttpPut("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IActionResult Update(Guid id, [FromBody] UpdateEventDto dto)
     {
-        var updated = eventService.Update(id, dto);
-
-        if (!updated) return NotFoundProblem($"Событие с идентификатором '{id}' не найдено.");
+        eventService.Update(id, dto);
 
         logger.LogInformation("Обновлено событие с Id {Id}", id);
 
@@ -63,11 +79,11 @@ public class EventsController(ILogger<EventsController> logger, IEventService ev
     /// Удаляет событие.
     /// </summary>
     [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IActionResult Delete(Guid id)
     {
-        var deleted = eventService.Delete(id);
-
-        if (!deleted) return NotFoundProblem($"Событие с идентификатором '{id}' не найдено.");
+        eventService.Delete(id);
 
         logger.LogInformation("Удалено событие с Id {Id}", id);
 
