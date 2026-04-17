@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Diagnostics;
-using RaktWebApi.Common.Helpers;
+﻿using RaktWebApi.Common.Helpers;
 using RaktWebApi.Common.Middleware;
 using Serilog;
 

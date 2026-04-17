@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using RaktWebApi.Common.Exceptions;
+﻿using RaktWebApi.Common.Exceptions;
 using RaktWebApi.Data.Repositories;
 using RaktWebApi.Mappers;
 using RaktWebApi.Models;

@@ -23,6 +23,9 @@ public class EventsController(
     public ActionResult<PaginatedResult<Event>> GetAll([FromQuery] EventQueryDto query)
     {
         var events = eventService.GetAll(query);
+
+        logger.LogInformation("Запрошен список событий с параметрами: {@Query}", query);
+
         return Ok(events);
     }
 
@@ -35,6 +38,8 @@ public class EventsController(
     public ActionResult<Event> GetById(Guid id)
     {
         var entity = eventService.GetById(id);
+
+        logger.LogInformation("Запрошено событие с Id {Id}", entity.Id);
 
         return Ok(entity);
     }

@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using RaktWebApi.Common;
+
 namespace RaktWebApi.Controllers;
 
 /// <summary>

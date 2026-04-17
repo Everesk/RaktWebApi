@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using RaktWebApi.Common;
-using RaktWebApi.Data.Repositories;
+﻿using RaktWebApi.Data.Repositories;
 using RaktWebApi.Services;
 using Serilog;
 using Serilog.Events;
