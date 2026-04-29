@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using RaktWebApi.Models;
 
 namespace RaktWebApi.Data.Repositories;
@@ -8,56 +9,35 @@ namespace RaktWebApi.Data.Repositories;
 /// </summary>
 public class InMemoryBookingRepository : IBookingRepository
 {
-    private readonly List<Booking> bookings = [];
-    private readonly Lock _lock = new();
+    private readonly ConcurrentDictionary<Guid, Booking> bookings = new();
 
     /// <inheritdoc />
     public IEnumerable<Booking> GetAll()
     {
-        using (_lock.EnterScope())
-        {
-            return bookings.ToList();
-        }
+        return bookings.Values.ToList();
     }
 
     /// <inheritdoc />
     public Booking? GetById(Guid id)
     {
-        using (_lock.EnterScope())
-        {
-            return bookings.FirstOrDefault(booking => booking.Id == id);
-        }
+        return bookings.TryGetValue(id, out var booking) ? booking : null;
     }
 
     /// <inheritdoc />
     public void Add(Booking entity)
     {
-        using (_lock.EnterScope())
-        {
-            bookings.Add(entity);
-        }
+        bookings[entity.Id] = entity;
     }
 
     /// <inheritdoc />
     public void Update(Booking entity)
     {
-        using (_lock.EnterScope())
-        {
-            var index = bookings.FindIndex(booking => booking.Id == entity.Id);
-
-            if (index >= 0)
-            {
-                bookings[index] = entity;
-            }
-        }
+        bookings[entity.Id] = entity;
     }
 
     /// <inheritdoc />
     public void Delete(Booking entity)
     {
-        using (_lock.EnterScope())
-        {
-            bookings.Remove(entity);
-        }
+        bookings.TryRemove(entity.Id, out _);
     }
 }
