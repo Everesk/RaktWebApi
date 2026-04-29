@@ -1,7 +1,10 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using RaktWebApi.Data.Repositories;
 using RaktWebApi.Models;
+using RaktWebApi.Services;
 
 namespace Rakt.Tests.Services;
 
@@ -25,14 +28,16 @@ public class BookingBackgroundServiceTests
         var booking = new Booking(eventEntity.Id);
         bookingRepository.Add(booking);
 
-        var processor = new RaktWebApi.Services.BookingProcessor(
-            bookingRepository,
-            NullLogger<RaktWebApi.Services.BookingProcessor>.Instance);
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IBookingRepository>(bookingRepository);
+        services.AddScoped<IBookingProcessor, BookingProcessor>();
+        await using var provider = services.BuildServiceProvider();
 
-        var service = new RaktWebApi.Services.BookingBackgroundService(
+        var service = new BookingBackgroundService(
             bookingRepository,
-            processor,
-            NullLogger<RaktWebApi.Services.BookingBackgroundService>.Instance);
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<BookingBackgroundService>.Instance);
 
         using var cts = new CancellationTokenSource();
         // Act

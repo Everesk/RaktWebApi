@@ -36,6 +36,30 @@ public class BookingServiceTests
     }
 
     /// <summary>
+    /// Проверяет, что для одного события можно создать несколько броней с уникальными идентификаторами.
+    /// </summary>
+    [Fact]
+    public async Task CreateBookingAsync_ShouldCreateMultipleBookingsWithUniqueIds()
+    {
+        // Arrange
+        var eventRepository = new InMemoryEventRepository();
+        var eventEntity = CreateEvent();
+        eventRepository.Add(eventEntity);
+        var service = CreateService(eventRepository);
+
+        // Act
+        var first = await service.CreateBookingAsync(eventEntity.Id);
+        var second = await service.CreateBookingAsync(eventEntity.Id);
+
+        // Assert
+        first.Id.Should().NotBe(second.Id);
+        first.EventId.Should().Be(eventEntity.Id);
+        second.EventId.Should().Be(eventEntity.Id);
+        first.Status.Should().Be(BookingStatus.Pending);
+        second.Status.Should().Be(BookingStatus.Pending);
+    }
+
+    /// <summary>
     /// Проверяет, что сервис возвращает бронирование по идентификатору.
     /// </summary>
     [Fact]
@@ -55,6 +79,52 @@ public class BookingServiceTests
         booking.Should().NotBeNull();
         booking.Id.Should().Be(created.Id);
         booking.EventId.Should().Be(eventEntity.Id);
+    }
+
+    /// <summary>
+    /// Проверяет, что сервис возвращает актуальный статус бронирования после изменения состояния.
+    /// </summary>
+    [Fact]
+    public async Task GetBookingByIdAsync_ShouldReflectStatusChange()
+    {
+        // Arrange
+        var eventRepository = new InMemoryEventRepository();
+        var eventEntity = CreateEvent();
+        eventRepository.Add(eventEntity);
+        var service = CreateService(eventRepository);
+        var created = await service.CreateBookingAsync(eventEntity.Id);
+
+        created.Confirm(DateTime.Now);
+
+        // Act
+        var booking = await service.GetBookingByIdAsync(created.Id);
+
+        // Assert
+        booking.Status.Should().Be(BookingStatus.Confirmed);
+        booking.ProcessedAt.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Проверяет, что сервис возвращает актуальный статус бронирования после отклонения.
+    /// </summary>
+    [Fact]
+    public async Task GetBookingByIdAsync_ShouldReflectRejectedStatus()
+    {
+        // Arrange
+        var eventRepository = new InMemoryEventRepository();
+        var eventEntity = CreateEvent();
+        eventRepository.Add(eventEntity);
+        var service = CreateService(eventRepository);
+        var created = await service.CreateBookingAsync(eventEntity.Id);
+
+        created.Reject(DateTime.Now);
+
+        // Act
+        var booking = await service.GetBookingByIdAsync(created.Id);
+
+        // Assert
+        booking.Status.Should().Be(BookingStatus.Rejected);
+        booking.ProcessedAt.Should().NotBeNull();
     }
 
     /// <summary>
@@ -91,6 +161,27 @@ public class BookingServiceTests
         // Assert
         await act.Should().ThrowAsync<NotFoundException>()
             .WithMessage($"*{eventId}*");
+    }
+
+    /// <summary>
+    /// Проверяет, что сервис не создает бронь для удаленного события.
+    /// </summary>
+    [Fact]
+    public async Task CreateBookingAsync_ShouldThrowNotFoundException_WhenEventWasDeleted()
+    {
+        // Arrange
+        var eventRepository = new InMemoryEventRepository();
+        var eventEntity = CreateEvent();
+        eventRepository.Add(eventEntity);
+        eventRepository.Delete(eventEntity);
+        var service = CreateService(eventRepository);
+
+        // Act
+        Func<Task> act = async () => await service.CreateBookingAsync(eventEntity.Id);
+
+        // Assert
+        await act.Should().ThrowAsync<NotFoundException>()
+            .WithMessage($"*{eventEntity.Id}*");
     }
 
     /// <summary>

@@ -8,7 +8,7 @@ namespace RaktWebApi.Services;
 /// </summary>
 public sealed class BookingBackgroundService(
     IBookingRepository bookingRepository,
-    IBookingProcessor bookingProcessor,
+    IServiceScopeFactory scopeFactory,
     ILogger<BookingBackgroundService> logger) : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
@@ -56,6 +56,9 @@ public sealed class BookingBackgroundService(
 
             try
             {
+                using var scope = scopeFactory.CreateScope();
+                var bookingProcessor = scope.ServiceProvider.GetRequiredService<IBookingProcessor>();
+
                 await bookingProcessor.ProcessAsync(booking, cancellationToken);
             }
             finally

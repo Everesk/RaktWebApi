@@ -48,4 +48,13 @@ public class Booking
         Status = BookingStatus.Confirmed;
         ProcessedAt = processedAt;
     }
+
+    /// <summary>
+    /// Отклоняет бронирование и фиксирует время обработки.
+    /// </summary>
+    internal void Reject(DateTime processedAt)
+    {
+        Status = BookingStatus.Rejected;
+        ProcessedAt = processedAt;
+    }
 }
