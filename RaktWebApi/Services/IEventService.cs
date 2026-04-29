@@ -1,4 +1,5 @@
 ﻿using RaktWebApi.Models;
+using RaktWebApi.Models.DTO;
 
 namespace RaktWebApi.Services;
 

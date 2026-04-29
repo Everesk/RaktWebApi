@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using RaktWebApi.Models;
+using RaktWebApi.Models.DTO;
 using RaktWebApi.Services;
 
 namespace RaktWebApi.Controllers;

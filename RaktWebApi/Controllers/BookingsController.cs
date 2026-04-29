@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using RaktWebApi.Models;
+using RaktWebApi.Mappers;
+using RaktWebApi.Models.DTO;
 using RaktWebApi.Services;
 
 namespace RaktWebApi.Controllers;
@@ -17,32 +18,34 @@ public class BookingsController(
     /// Создает бронь для указанного события.
     /// </summary>
     [HttpPost("{eventId:guid}")]
-    [ProducesResponseType(typeof(Booking), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(typeof(BookingDto), StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Booking>> Create(Guid eventId)
+    public async Task<ActionResult<BookingDto>> Create(Guid eventId)
     {
         var booking = await bookingService.CreateBookingAsync(eventId);
+        var dto = booking.ToDto();
 
         logger.LogInformation("Создана бронь с Id {Id} для события {EventId}", booking.Id, booking.EventId);
 
         return AcceptedAtAction(
             actionName: nameof(GetById),
             routeValues: new { id = booking.Id },
-            value: booking);
+            value: dto);
     }
 
     /// <summary>
     /// Возвращает бронирование по идентификатору.
     /// </summary>
     [HttpGet("{id:guid}")]
-    [ProducesResponseType(typeof(Booking), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BookingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Booking>> GetById(Guid id)
+    public async Task<ActionResult<BookingDto>> GetById(Guid id)
     {
         var booking = await bookingService.GetBookingByIdAsync(id);
+        var dto = booking.ToDto();
 
         logger.LogInformation("Запрошена бронь с Id {Id}", booking.Id);
 
-        return Ok(booking);
+        return Ok(dto);
     }
 }

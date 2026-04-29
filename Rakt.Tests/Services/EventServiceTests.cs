@@ -3,6 +3,7 @@ using FluentAssertions;
 using RaktWebApi.Common.Exceptions;
 using RaktWebApi.Data.Repositories;
 using RaktWebApi.Models;
+using RaktWebApi.Models.DTO;
 using RaktWebApi.Services;
 
 namespace Rakt.Tests.Services;

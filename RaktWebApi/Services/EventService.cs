@@ -2,6 +2,7 @@
 using RaktWebApi.Data.Repositories;
 using RaktWebApi.Mappers;
 using RaktWebApi.Models;
+using RaktWebApi.Models.DTO;
 
 namespace RaktWebApi.Services;
 
