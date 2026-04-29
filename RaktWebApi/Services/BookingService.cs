@@ -14,8 +14,10 @@ public class BookingService(
     /// <summary>
     /// Создает бронирование для указанного события.
     /// </summary>
-    public Task<Booking> CreateBookingAsync(Guid eventId)
+    public Task<Booking> CreateBookingAsync(Guid eventId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (eventRepository.GetById(eventId) is null)
         {
             throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
@@ -30,8 +32,10 @@ public class BookingService(
     /// <summary>
     /// Возвращает бронирование по идентификатору.
     /// </summary>
-    public Task<Booking> GetBookingByIdAsync(Guid bookingId)
+    public Task<Booking> GetBookingByIdAsync(Guid bookingId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var booking = bookingRepository.GetById(bookingId);
 
         return Task.FromResult(

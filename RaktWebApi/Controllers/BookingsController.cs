@@ -20,9 +20,9 @@ public class BookingsController(
     [HttpPost("{eventId:guid}")]
     [ProducesResponseType(typeof(BookingDto), StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<BookingDto>> Create(Guid eventId)
+    public async Task<ActionResult<BookingDto>> Create(Guid eventId, CancellationToken ct)
     {
-        var booking = await bookingService.CreateBookingAsync(eventId);
+        var booking = await bookingService.CreateBookingAsync(eventId, ct);
         var dto = booking.ToDto();
 
         logger.LogInformation("Создана бронь с Id {Id} для события {EventId}", booking.Id, booking.EventId);
@@ -39,9 +39,9 @@ public class BookingsController(
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(BookingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<BookingDto>> GetById(Guid id)
+    public async Task<ActionResult<BookingDto>> GetById(Guid id, CancellationToken ct)
     {
-        var booking = await bookingService.GetBookingByIdAsync(id);
+        var booking = await bookingService.GetBookingByIdAsync(id, ct);
         var dto = booking.ToDto();
 
         logger.LogInformation("Запрошена бронь с Id {Id}", booking.Id);

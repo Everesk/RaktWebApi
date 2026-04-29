@@ -10,10 +10,10 @@ public interface IBookingService
     /// <summary>
     /// Создает бронирование для указанного события.
     /// </summary>
-    Task<Booking> CreateBookingAsync(Guid eventId);
+    Task<Booking> CreateBookingAsync(Guid eventId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Возвращает бронирование по идентификатору.
     /// </summary>
-    Task<Booking> GetBookingByIdAsync(Guid bookingId);
+    Task<Booking> GetBookingByIdAsync(Guid bookingId, CancellationToken cancellationToken = default);
 }
