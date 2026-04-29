@@ -15,7 +15,7 @@ public class InMemoryEventRepository : IEventRepository
     {
         using (_lock.EnterScope())
         {
-            return events.ToList();
+            return [.. events];
         }
     }
 

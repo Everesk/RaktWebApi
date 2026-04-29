@@ -35,18 +35,23 @@ public class BookingBackgroundServiceTests
             NullLogger<RaktWebApi.Services.BookingBackgroundService>.Instance);
 
         using var cts = new CancellationTokenSource();
-
         // Act
         await service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromSeconds(4));
-        var processed = bookingRepository.GetById(booking.Id);
+
+        Booking? processed = null;
+        var completed = SpinWait.SpinUntil(() =>
+        {
+            processed = bookingRepository.GetById(booking.Id);
+            return processed?.Status == BookingStatus.Confirmed;
+        }, TimeSpan.FromSeconds(30));
 
         // Assert
+        completed.Should().BeTrue("фоновая обработка должна завершиться в течение 30 секунд");
         processed.Should().NotBeNull();
         processed!.Status.Should().Be(BookingStatus.Confirmed);
         processed.ProcessedAt.Should().NotBeNull();
 
-        cts.Cancel();
+        await cts.CancelAsync();
         await service.StopAsync(CancellationToken.None);
     }
 

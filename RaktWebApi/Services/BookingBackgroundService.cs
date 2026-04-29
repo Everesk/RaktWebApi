@@ -13,7 +13,7 @@ public sealed class BookingBackgroundService(
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
     private readonly HashSet<Guid> processingBookings = [];
-    private readonly object syncRoot = new();
+    private readonly Lock syncRoot = new();
 
     /// <summary>
     /// Основной цикл фоновой обработки.
@@ -70,7 +70,7 @@ public sealed class BookingBackgroundService(
     /// </summary>
     private bool TryMarkProcessing(Guid bookingId)
     {
-        lock (syncRoot)
+        using (syncRoot.EnterScope())
         {
             return processingBookings.Add(bookingId);
         }
@@ -81,7 +81,7 @@ public sealed class BookingBackgroundService(
     /// </summary>
     private void UnmarkProcessing(Guid bookingId)
     {
-        lock (syncRoot)
+        using (syncRoot.EnterScope())
         {
             processingBookings.Remove(bookingId);
         }
