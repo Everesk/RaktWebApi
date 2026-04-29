@@ -39,6 +39,20 @@ public class InMemoryBookingRepository : IBookingRepository
     }
 
     /// <inheritdoc />
+    public void Update(Booking entity)
+    {
+        using (_lock.EnterScope())
+        {
+            var index = bookings.FindIndex(booking => booking.Id == entity.Id);
+
+            if (index >= 0)
+            {
+                bookings[index] = entity;
+            }
+        }
+    }
+
+    /// <inheritdoc />
     public void Delete(Booking entity)
     {
         using (_lock.EnterScope())

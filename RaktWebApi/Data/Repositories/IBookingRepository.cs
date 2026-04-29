@@ -23,6 +23,11 @@ public interface IBookingRepository
     void Add(Booking entity);
 
     /// <summary>
+    /// Обновляет бронирование.
+    /// </summary>
+    void Update(Booking entity);
+
+    /// <summary>
     /// Удаляет бронирование.
     /// </summary>
     void Delete(Booking entity);

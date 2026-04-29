@@ -43,9 +43,9 @@ public class Booking
     /// <summary>
     /// Обновляет статус бронирования и фиксирует время обработки.
     /// </summary>
-    internal void Process(BookingStatus status, DateTime processedAt)
+    internal void Confirm(DateTime processedAt)
     {
-        Status = status;
+        Status = BookingStatus.Confirmed;
         ProcessedAt = processedAt;
     }
 }
