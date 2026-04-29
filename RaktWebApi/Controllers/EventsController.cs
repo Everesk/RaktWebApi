@@ -89,4 +89,5 @@ public class EventsController(
 
         return NoContent();
     }
+
 }
