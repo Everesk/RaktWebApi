@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using RaktWebApi.Mappers;
 using RaktWebApi.Models;
 using RaktWebApi.Models.DTO;
 using RaktWebApi.Services;
@@ -12,7 +13,8 @@ namespace RaktWebApi.Controllers;
 [Route("[controller]")]
 public class EventsController(
     ILogger<EventsController> logger,
-    IEventService eventService) : ApiControllerBase
+    IEventService eventService,
+    IBookingService bookingService) : ApiControllerBase
 {
     /// <summary>
     /// Возвращает список событий с учетом фильтрации и пагинации.
@@ -44,6 +46,26 @@ public class EventsController(
         logger.LogInformation("Запрошено событие с Id {Id}", entity.Id);
 
         return Ok(entity);
+    }
+
+    /// <summary>
+    /// Создает бронь для указанного события.
+    /// </summary>
+    [HttpPost("{id:guid}/book")]
+    [ProducesResponseType(typeof(BookingDto), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<BookingDto>> CreateBooking(Guid id, CancellationToken cancellationToken)
+    {
+        var booking = await bookingService.CreateBookingAsync(id, cancellationToken);
+        var dto = booking.ToDto();
+
+        logger.LogInformation("Создана бронь с Id {Id} для события {EventId}", booking.Id, booking.EventId);
+
+        return AcceptedAtAction(
+            actionName: nameof(BookingsController.GetById),
+            controllerName: "Bookings",
+            routeValues: new { id = booking.Id },
+            value: dto);
     }
 
     /// <summary>
