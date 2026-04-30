@@ -23,7 +23,7 @@ public sealed class BookingProcessor(
 
         await Task.Delay(ExternalSystemDelay, cancellationToken);
 
-        booking.Confirm(DateTime.Now);
+        booking.Confirm(DateTimeOffset.UtcNow);
         bookingRepository.Update(booking);
 
         logger.LogInformation(

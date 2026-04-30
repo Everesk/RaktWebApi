@@ -13,6 +13,11 @@ namespace Rakt.Tests.Services;
 /// </summary>
 public class BookingBackgroundServiceTests
 {
+    private static DateTimeOffset Utc(int year, int month, int day, int hour, int minute, int second)
+    {
+        return new DateTimeOffset(year, month, day, hour, minute, second, TimeSpan.Zero);
+    }
+
     /// <summary>
     /// Проверяет, что фоновый сервис переводит Pending-бронь в Confirmed.
     /// </summary>
@@ -68,7 +73,7 @@ public class BookingBackgroundServiceTests
         return new Event(
             title: "Тестовое событие",
             description: null,
-            startAt: new DateTime(2026, 4, 1, 10, 0, 0),
-            endAt: new DateTime(2026, 4, 1, 11, 0, 0));
+            startAt: Utc(2026, 4, 1, 10, 0, 0),
+            endAt: Utc(2026, 4, 1, 11, 0, 0));
     }
 }

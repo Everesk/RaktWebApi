@@ -23,18 +23,18 @@ public class Event
     /// <summary>
     /// Дата и время начала события.
     /// </summary>
-    public DateTime StartAt { get; private set; }
+    public DateTimeOffset StartAt { get; private set; }
 
     /// <summary>
     /// Дата и время окончания события.
     /// </summary>
-    public DateTime EndAt { get; private set; }
+    public DateTimeOffset EndAt { get; private set; }
 
     /// <summary>
     /// Основной конструктор
     /// </summary>
     
-    internal Event(string title, string? description, DateTime startAt, DateTime endAt)
+    internal Event(string title, string? description, DateTimeOffset startAt, DateTimeOffset endAt)
     {
         Title = title;
         Description = description;
@@ -45,7 +45,7 @@ public class Event
     /// <summary>
     /// Полностью обновляет все свойства
     /// </summary>
-    internal void Update(string title, string? description, DateTime startAt, DateTime endAt)
+    internal void Update(string title, string? description, DateTimeOffset startAt, DateTimeOffset endAt)
     {
         Title = title;
         Description = description;

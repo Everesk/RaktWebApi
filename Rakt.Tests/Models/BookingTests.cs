@@ -17,11 +17,11 @@ public class BookingTests
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var beforeCreate = DateTime.Now;
+        var beforeCreate = DateTimeOffset.UtcNow;
 
         // Act
         var booking = CreateBooking(eventId);
-        var afterCreate = DateTime.Now;
+        var afterCreate = DateTimeOffset.UtcNow;
 
         // Assert
         booking.Should().NotBeNull();

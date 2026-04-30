@@ -17,13 +17,13 @@ public class EventQueryDto : IValidatableObject
     /// Фильтр по времени начала события.
     /// Возвращаются события, начинающиеся не раньше указанного значения.
     /// </summary>
-    public DateTime? From { get; set; }
+    public DateTimeOffset? From { get; set; }
 
     /// <summary>
     /// Фильтр по времени окончания события.
     /// Возвращаются события, заканчивающиеся не позже указанного значения.
     /// </summary>
-    public DateTime? To { get; set; }
+    public DateTimeOffset? To { get; set; }
 
     /// <summary>
     /// Номер страницы (опционально).

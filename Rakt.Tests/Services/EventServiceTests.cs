@@ -25,8 +25,8 @@ public class EventServiceTests
         {
             Title = "Встреча команды",
             Description = "Обсуждение задач",
-            StartAt = new DateTime(2026, 4, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 1, 11, 0, 0)
+            StartAt = Utc(2026, 4, 1, 10, 0, 0),
+            EndAt = Utc(2026, 4, 1, 11, 0, 0)
         };
 
         // Act
@@ -53,15 +53,15 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Событие 1",
-            StartAt = new DateTime(2026, 4, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 1, 11, 0, 0)
+            StartAt = Utc(2026, 4, 1, 10, 0, 0),
+            EndAt = Utc(2026, 4, 1, 11, 0, 0)
         });
 
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Событие 2",
-            StartAt = new DateTime(2026, 4, 2, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 2, 11, 0, 0)
+            StartAt = Utc(2026, 4, 2, 10, 0, 0),
+            EndAt = Utc(2026, 4, 2, 11, 0, 0)
         });
 
         // Act
@@ -85,8 +85,8 @@ public class EventServiceTests
         var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Найти меня",
-            StartAt = new DateTime(2026, 4, 3, 9, 0, 0),
-            EndAt = new DateTime(2026, 4, 3, 10, 0, 0)
+            StartAt = Utc(2026, 4, 3, 9, 0, 0),
+            EndAt = Utc(2026, 4, 3, 10, 0, 0)
         });
 
         // Act
@@ -110,16 +110,16 @@ public class EventServiceTests
         {
             Title = "Старый заголовок",
             Description = "Старое описание",
-            StartAt = new DateTime(2026, 4, 4, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 4, 11, 0, 0)
+            StartAt = Utc(2026, 4, 4, 10, 0, 0),
+            EndAt = Utc(2026, 4, 4, 11, 0, 0)
         });
 
         var dto = new UpdateEventDto
         {
             Title = "Новый заголовок",
             Description = "Новое описание",
-            StartAt = new DateTime(2026, 4, 4, 12, 0, 0),
-            EndAt = new DateTime(2026, 4, 4, 13, 0, 0)
+            StartAt = Utc(2026, 4, 4, 12, 0, 0),
+            EndAt = Utc(2026, 4, 4, 13, 0, 0)
         };
 
         // Act
@@ -144,8 +144,8 @@ public class EventServiceTests
         var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Удаляемое событие",
-            StartAt = new DateTime(2026, 4, 5, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 5, 11, 0, 0)
+            StartAt = Utc(2026, 4, 5, 10, 0, 0),
+            EndAt = Utc(2026, 4, 5, 11, 0, 0)
         });
 
         // Act
@@ -169,15 +169,15 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Встреча команды",
-            StartAt = new DateTime(2026, 4, 6, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 6, 11, 0, 0)
+            StartAt = Utc(2026, 4, 6, 10, 0, 0),
+            EndAt = Utc(2026, 4, 6, 11, 0, 0)
         });
 
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Созвон с заказчиком",
-            StartAt = new DateTime(2026, 4, 6, 12, 0, 0),
-            EndAt = new DateTime(2026, 4, 6, 13, 0, 0)
+            StartAt = Utc(2026, 4, 6, 12, 0, 0),
+            EndAt = Utc(2026, 4, 6, 13, 0, 0)
         });
 
         // Act
@@ -204,29 +204,29 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Раннее событие",
-            StartAt = new DateTime(2026, 4, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 1, 11, 0, 0)
+            StartAt = Utc(2026, 4, 1, 10, 0, 0),
+            EndAt = Utc(2026, 4, 1, 11, 0, 0)
         });
 
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Подходящее событие",
-            StartAt = new DateTime(2026, 4, 10, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 10, 11, 0, 0)
+            StartAt = Utc(2026, 4, 10, 10, 0, 0),
+            EndAt = Utc(2026, 4, 10, 11, 0, 0)
         });
 
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Позднее событие",
-            StartAt = new DateTime(2026, 4, 20, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 20, 11, 0, 0)
+            StartAt = Utc(2026, 4, 20, 10, 0, 0),
+            EndAt = Utc(2026, 4, 20, 11, 0, 0)
         });
 
         // Act
         var result = await service.GetAllAsync(new EventQueryDto
         {
-            From = new DateTime(2026, 4, 5, 0, 0, 0),
-            To = new DateTime(2026, 4, 15, 23, 59, 59)
+            From = Utc(2026, 4, 5, 0, 0, 0),
+            To = Utc(2026, 4, 15, 23, 59, 59)
         });
 
         // Assert
@@ -248,8 +248,8 @@ public class EventServiceTests
             await service.CreateAsync(new CreateEventDto
             {
                 Title = $"Событие {i}",
-                StartAt = new DateTime(2026, 4, i, 10, 0, 0),
-                EndAt = new DateTime(2026, 4, i, 11, 0, 0)
+                StartAt = Utc(2026, 4, i, 10, 0, 0),
+                EndAt = Utc(2026, 4, i, 11, 0, 0)
             });
         }
 
@@ -283,30 +283,30 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Встреча backend",
-            StartAt = new DateTime(2026, 4, 10, 9, 0, 0),
-            EndAt = new DateTime(2026, 4, 10, 10, 0, 0)
+            StartAt = Utc(2026, 4, 10, 9, 0, 0),
+            EndAt = Utc(2026, 4, 10, 10, 0, 0)
         });
 
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Встреча frontend",
-            StartAt = new DateTime(2026, 4, 11, 9, 0, 0),
-            EndAt = new DateTime(2026, 4, 11, 10, 0, 0)
+            StartAt = Utc(2026, 4, 11, 9, 0, 0),
+            EndAt = Utc(2026, 4, 11, 10, 0, 0)
         });
 
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Созвон backend",
-            StartAt = new DateTime(2026, 4, 12, 9, 0, 0),
-            EndAt = new DateTime(2026, 4, 12, 10, 0, 0)
+            StartAt = Utc(2026, 4, 12, 9, 0, 0),
+            EndAt = Utc(2026, 4, 12, 10, 0, 0)
         });
 
         // Act
         var result = await service.GetAllAsync(new EventQueryDto
         {
             Title = "встреча",
-            From = new DateTime(2026, 4, 10, 0, 0, 0),
-            To = new DateTime(2026, 4, 11, 23, 59, 59),
+            From = Utc(2026, 4, 10, 0, 0, 0),
+            To = Utc(2026, 4, 11, 23, 59, 59),
             Page = 1,
             PageSize = 1
         });
@@ -346,8 +346,8 @@ public class EventServiceTests
         var dto = new UpdateEventDto
         {
             Title = "Обновление",
-            StartAt = new DateTime(2026, 4, 15, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 15, 11, 0, 0)
+            StartAt = Utc(2026, 4, 15, 10, 0, 0),
+            EndAt = Utc(2026, 4, 15, 11, 0, 0)
         };
 
         // Act
@@ -369,8 +369,8 @@ public class EventServiceTests
         var dto = new CreateEventDto
         {
             Title = "Отменяемое событие",
-            StartAt = new DateTime(2026, 4, 16, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 16, 11, 0, 0)
+            StartAt = Utc(2026, 4, 16, 10, 0, 0),
+            EndAt = Utc(2026, 4, 16, 11, 0, 0)
         };
 
         // Act + Assert
@@ -411,8 +411,8 @@ public class EventServiceTests
         var dto = new UpdateEventDto
         {
             Title = "Некорректное событие",
-            StartAt = new DateTime(2026, 4, 20, 12, 0, 0),
-            EndAt = new DateTime(2026, 4, 20, 11, 0, 0)
+            StartAt = Utc(2026, 4, 20, 12, 0, 0),
+            EndAt = Utc(2026, 4, 20, 11, 0, 0)
         };
 
         // Act
@@ -433,8 +433,8 @@ public class EventServiceTests
         // Arrange
         var dto = new EventQueryDto
         {
-            From = new DateTime(2026, 5, 1, 0, 0, 0),
-            To = new DateTime(2026, 1, 1, 0, 0, 0)
+            From = Utc(2026, 5, 1, 0, 0, 0),
+            To = Utc(2026, 1, 1, 0, 0, 0)
         };
 
         // Act
@@ -454,6 +454,14 @@ public class EventServiceTests
     {
         var repository = new InMemoryEventRepository();
         return new EventService(repository);
+    }
+
+    /// <summary>
+    /// Создает UTC DateTimeOffset для тестовых данных.
+    /// </summary>
+    private static DateTimeOffset Utc(int year, int month, int day, int hour, int minute, int second)
+    {
+        return new DateTimeOffset(year, month, day, hour, minute, second, TimeSpan.Zero);
     }
 
     /// <summary>

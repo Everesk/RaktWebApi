@@ -11,6 +11,11 @@ namespace Rakt.Tests.Services;
 /// </summary>
 public class BookingServiceTests
 {
+    private static DateTimeOffset Utc(int year, int month, int day, int hour, int minute, int second)
+    {
+        return new DateTimeOffset(year, month, day, hour, minute, second, TimeSpan.Zero);
+    }
+
     /// <summary>
     /// Проверяет, что сервис создает бронирование с ожидаемыми значениями по умолчанию.
     /// </summary>
@@ -32,7 +37,7 @@ public class BookingServiceTests
         booking.EventId.Should().Be(eventEntity.Id);
         booking.Status.Should().Be(BookingStatus.Pending);
         booking.ProcessedAt.Should().BeNull();
-        booking.CreatedAt.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(2));
+        booking.CreatedAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(2));
     }
 
     /// <summary>
@@ -94,7 +99,7 @@ public class BookingServiceTests
         var service = CreateService(eventRepository);
         var created = await service.CreateBookingAsync(eventEntity.Id);
 
-        created.Confirm(DateTime.Now);
+        created.Confirm(DateTimeOffset.UtcNow);
 
         // Act
         var booking = await service.GetBookingByIdAsync(created.Id);
@@ -117,7 +122,7 @@ public class BookingServiceTests
         var service = CreateService(eventRepository);
         var created = await service.CreateBookingAsync(eventEntity.Id);
 
-        created.Reject(DateTime.Now);
+        created.Reject(DateTimeOffset.UtcNow);
 
         // Act
         var booking = await service.GetBookingByIdAsync(created.Id);
@@ -201,7 +206,7 @@ public class BookingServiceTests
         return new Event(
             title: "Тестовое событие",
             description: null,
-            startAt: new DateTime(2026, 4, 1, 10, 0, 0),
-            endAt: new DateTime(2026, 4, 1, 11, 0, 0));
+            startAt: Utc(2026, 4, 1, 10, 0, 0),
+            endAt: Utc(2026, 4, 1, 11, 0, 0));
     }
 }

@@ -24,13 +24,13 @@ public class EventBaseDto : IValidatableObject
     /// Дата и время начала события.
     /// </summary>
     [Required(ErrorMessage = "Дата начала обязательна")]
-    public DateTime? StartAt { get; set; }
+    public DateTimeOffset? StartAt { get; set; }
 
     /// <summary>
     /// Дата и время окончания события.
     /// </summary>
     [Required(ErrorMessage = "Дата окончания обязательна")]
-    public DateTime? EndAt { get; set; }
+    public DateTimeOffset? EndAt { get; set; }
 
 
     /// <summary>

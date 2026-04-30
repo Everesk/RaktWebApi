@@ -18,17 +18,17 @@ public class Booking
     /// <summary>
     /// Текущий статус бронирования.
     /// </summary>
-    public BookingStatus Status { get; private set; } = BookingStatus.Pending;
+    public BookingStatus Status { get; private set; } 
 
     /// <summary>
     /// Дата и время создания бронирования.
     /// </summary>
-    public DateTime CreatedAt { get; private set; } = DateTime.Now;
+    public DateTimeOffset CreatedAt { get; private set; } 
 
     /// <summary>
     /// Дата и время обработки бронирования.
     /// </summary>
-    public DateTime? ProcessedAt { get; private set; }
+    public DateTimeOffset? ProcessedAt { get; private set; }
 
     /// <summary>
     /// Создает новое бронирование для указанного события.
@@ -37,13 +37,13 @@ public class Booking
     {
         EventId = eventId;
         Status = BookingStatus.Pending;
-        CreatedAt = DateTime.Now;
+        CreatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <summary>
     /// Обновляет статус бронирования и фиксирует время обработки.
     /// </summary>
-    internal void Confirm(DateTime processedAt)
+    internal void Confirm(DateTimeOffset processedAt)
     {
         Status = BookingStatus.Confirmed;
         ProcessedAt = processedAt;
@@ -52,7 +52,7 @@ public class Booking
     /// <summary>
     /// Отклоняет бронирование и фиксирует время обработки.
     /// </summary>
-    internal void Reject(DateTime processedAt)
+    internal void Reject(DateTimeOffset processedAt)
     {
         Status = BookingStatus.Rejected;
         ProcessedAt = processedAt;

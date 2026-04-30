@@ -23,10 +23,10 @@ public class BookingDto
     /// <summary>
     /// Дата и время создания бронирования.
     /// </summary>
-    public DateTime CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>
     /// Дата и время обработки бронирования.
     /// </summary>
-    public DateTime? ProcessedAt { get; set; }
+    public DateTimeOffset? ProcessedAt { get; set; }
 }
