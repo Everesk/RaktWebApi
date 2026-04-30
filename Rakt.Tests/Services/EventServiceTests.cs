@@ -3,6 +3,7 @@ using FluentAssertions;
 using RaktWebApi.Common.Exceptions;
 using RaktWebApi.Data.Repositories;
 using RaktWebApi.Models;
+using RaktWebApi.Models.DTO;
 using RaktWebApi.Services;
 
 namespace Rakt.Tests.Services;
@@ -16,7 +17,7 @@ public class EventServiceTests
     /// Проверяет, что событие успешно создается.
     /// </summary>
     [Fact]
-    public void Create_ShouldCreateEvent()
+    public async Task Create_ShouldCreateEvent()
     {
         // Arrange
         var service = CreateService();
@@ -24,12 +25,12 @@ public class EventServiceTests
         {
             Title = "Встреча команды",
             Description = "Обсуждение задач",
-            StartAt = new DateTime(2026, 4, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 1, 11, 0, 0)
+            StartAt = Utc(2026, 4, 1, 10, 0, 0),
+            EndAt = Utc(2026, 4, 1, 11, 0, 0)
         };
 
         // Act
-        var created = service.Create(dto);
+        var created = await service.CreateAsync(dto);
 
         // Assert
         created.Should().NotBeNull();
@@ -44,27 +45,27 @@ public class EventServiceTests
     /// Проверяет, что сервис возвращает все события.
     /// </summary>
     [Fact]
-    public void GetAll_ShouldReturnAllEvents()
+    public async Task GetAll_ShouldReturnAllEvents()
     {
         // Arrange
         var service = CreateService();
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Событие 1",
-            StartAt = new DateTime(2026, 4, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 1, 11, 0, 0)
+            StartAt = Utc(2026, 4, 1, 10, 0, 0),
+            EndAt = Utc(2026, 4, 1, 11, 0, 0)
         });
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Событие 2",
-            StartAt = new DateTime(2026, 4, 2, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 2, 11, 0, 0)
+            StartAt = Utc(2026, 4, 2, 10, 0, 0),
+            EndAt = Utc(2026, 4, 2, 11, 0, 0)
         });
 
         // Act
-        var result = service.GetAll(new EventQueryDto());
+        var result = await service.GetAllAsync(new EventQueryDto());
 
         // Assert
         result.Should().NotBeNull();
@@ -77,19 +78,19 @@ public class EventServiceTests
     /// Проверяет, что можно получить событие по идентификатору.
     /// </summary>
     [Fact]
-    public void GetById_ShouldReturnEvent_WhenEventExists()
+    public async Task GetById_ShouldReturnEvent_WhenEventExists()
     {
         // Arrange
         var service = CreateService();
-        var created = service.Create(new CreateEventDto
+        var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Найти меня",
-            StartAt = new DateTime(2026, 4, 3, 9, 0, 0),
-            EndAt = new DateTime(2026, 4, 3, 10, 0, 0)
+            StartAt = Utc(2026, 4, 3, 9, 0, 0),
+            EndAt = Utc(2026, 4, 3, 10, 0, 0)
         });
 
         // Act
-        var result = service.GetById(created.Id);
+        var result = await service.GetByIdAsync(created.Id);
 
         // Assert
         result.Should().NotBeNull();
@@ -101,29 +102,29 @@ public class EventServiceTests
     /// Проверяет, что существующее событие успешно обновляется.
     /// </summary>
     [Fact]
-    public void Update_ShouldUpdateEvent_WhenEventExists()
+    public async Task Update_ShouldUpdateEvent_WhenEventExists()
     {
         // Arrange
         var service = CreateService();
-        var created = service.Create(new CreateEventDto
+        var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Старый заголовок",
             Description = "Старое описание",
-            StartAt = new DateTime(2026, 4, 4, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 4, 11, 0, 0)
+            StartAt = Utc(2026, 4, 4, 10, 0, 0),
+            EndAt = Utc(2026, 4, 4, 11, 0, 0)
         });
 
         var dto = new UpdateEventDto
         {
             Title = "Новый заголовок",
             Description = "Новое описание",
-            StartAt = new DateTime(2026, 4, 4, 12, 0, 0),
-            EndAt = new DateTime(2026, 4, 4, 13, 0, 0)
+            StartAt = Utc(2026, 4, 4, 12, 0, 0),
+            EndAt = Utc(2026, 4, 4, 13, 0, 0)
         };
 
         // Act
-        service.Update(created.Id, dto);
-        var updated = service.GetById(created.Id);
+        await service.UpdateAsync(created.Id, dto);
+        var updated = await service.GetByIdAsync(created.Id);
 
         // Assert
         updated.Title.Should().Be("Новый заголовок");
@@ -133,23 +134,60 @@ public class EventServiceTests
     }
 
     /// <summary>
+    /// Проверяет, что обновление проходит через репозиторий, а не зависит от общей ссылки на объект.
+    /// </summary>
+    [Fact]
+    public async Task Update_ShouldPersistChangesViaRepositoryUpdate()
+    {
+        // Arrange
+        var repository = new DetachedEventRepository();
+        var service = new EventService(repository);
+        var created = await service.CreateAsync(new CreateEventDto
+        {
+            Title = "Исходный заголовок",
+            Description = "Исходное описание",
+            StartAt = Utc(2026, 4, 4, 10, 0, 0),
+            EndAt = Utc(2026, 4, 4, 11, 0, 0)
+        });
+
+        var dto = new UpdateEventDto
+        {
+            Title = "Обновленный заголовок",
+            Description = "Обновленное описание",
+            StartAt = Utc(2026, 4, 4, 12, 0, 0),
+            EndAt = Utc(2026, 4, 4, 13, 0, 0)
+        };
+
+        // Act
+        await service.UpdateAsync(created.Id, dto);
+        var updated = await service.GetByIdAsync(created.Id);
+
+        // Assert
+        repository.UpdateCalls.Should().Be(1);
+        updated.Title.Should().Be(dto.Title);
+        updated.Description.Should().Be(dto.Description);
+        updated.StartAt.Should().Be(dto.StartAt);
+        updated.EndAt.Should().Be(dto.EndAt);
+    }
+
+    /// <summary>
     /// Проверяет, что существующее событие успешно удаляется.
     /// </summary>
     [Fact]
-    public void Delete_ShouldRemoveEvent_WhenEventExists()
+    public async Task Delete_ShouldRemoveEvent_WhenEventExists()
     {
         // Arrange
         var service = CreateService();
-        var created = service.Create(new CreateEventDto
+        var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Удаляемое событие",
-            StartAt = new DateTime(2026, 4, 5, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 5, 11, 0, 0)
+            StartAt = Utc(2026, 4, 5, 10, 0, 0),
+            EndAt = Utc(2026, 4, 5, 11, 0, 0)
         });
 
         // Act
-        service.Delete(created.Id);
-        var result = service.GetAll(new EventQueryDto());
+        await service.DeleteAsync(created.Id);
+        var result = await service.GetAllAsync(new EventQueryDto());
 
         // Assert
         result.Items.Should().BeEmpty();
@@ -160,27 +198,27 @@ public class EventServiceTests
     /// Проверяет фильтрацию событий по названию.
     /// </summary>
     [Fact]
-    public void GetAll_ShouldFilterByTitle()
+    public async Task GetAll_ShouldFilterByTitle()
     {
         // Arrange
         var service = CreateService();
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Встреча команды",
-            StartAt = new DateTime(2026, 4, 6, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 6, 11, 0, 0)
+            StartAt = Utc(2026, 4, 6, 10, 0, 0),
+            EndAt = Utc(2026, 4, 6, 11, 0, 0)
         });
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Созвон с заказчиком",
-            StartAt = new DateTime(2026, 4, 6, 12, 0, 0),
-            EndAt = new DateTime(2026, 4, 6, 13, 0, 0)
+            StartAt = Utc(2026, 4, 6, 12, 0, 0),
+            EndAt = Utc(2026, 4, 6, 13, 0, 0)
         });
 
         // Act
-        var result = service.GetAll(new EventQueryDto
+        var result = await service.GetAllAsync(new EventQueryDto
         {
             Title = "встреча"
         });
@@ -195,37 +233,37 @@ public class EventServiceTests
     /// Проверяет фильтрацию событий по диапазону дат.
     /// </summary>
     [Fact]
-    public void GetAll_ShouldFilterByDates()
+    public async Task GetAll_ShouldFilterByDates()
     {
         // Arrange
         var service = CreateService();
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Раннее событие",
-            StartAt = new DateTime(2026, 4, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 1, 11, 0, 0)
+            StartAt = Utc(2026, 4, 1, 10, 0, 0),
+            EndAt = Utc(2026, 4, 1, 11, 0, 0)
         });
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Подходящее событие",
-            StartAt = new DateTime(2026, 4, 10, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 10, 11, 0, 0)
+            StartAt = Utc(2026, 4, 10, 10, 0, 0),
+            EndAt = Utc(2026, 4, 10, 11, 0, 0)
         });
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Позднее событие",
-            StartAt = new DateTime(2026, 4, 20, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 20, 11, 0, 0)
+            StartAt = Utc(2026, 4, 20, 10, 0, 0),
+            EndAt = Utc(2026, 4, 20, 11, 0, 0)
         });
 
         // Act
-        var result = service.GetAll(new EventQueryDto
+        var result = await service.GetAllAsync(new EventQueryDto
         {
-            From = new DateTime(2026, 4, 5, 0, 0, 0),
-            To = new DateTime(2026, 4, 15, 23, 59, 59)
+            From = Utc(2026, 4, 5, 0, 0, 0),
+            To = Utc(2026, 4, 15, 23, 59, 59)
         });
 
         // Assert
@@ -237,23 +275,23 @@ public class EventServiceTests
     /// Проверяет пагинацию событий.
     /// </summary>
     [Fact]
-    public void GetAll_ShouldApplyPagination()
+    public async Task GetAll_ShouldApplyPagination()
     {
         // Arrange
         var service = CreateService();
 
         for (var i = 1; i <= 5; i++)
         {
-            service.Create(new CreateEventDto
+            await service.CreateAsync(new CreateEventDto
             {
                 Title = $"Событие {i}",
-                StartAt = new DateTime(2026, 4, i, 10, 0, 0),
-                EndAt = new DateTime(2026, 4, i, 11, 0, 0)
+                StartAt = Utc(2026, 4, i, 10, 0, 0),
+                EndAt = Utc(2026, 4, i, 11, 0, 0)
             });
         }
 
         // Act
-        var result = service.GetAll(new EventQueryDto
+        var result = await service.GetAllAsync(new EventQueryDto
         {
             Page = 2,
             PageSize = 2
@@ -274,38 +312,38 @@ public class EventServiceTests
     /// Проверяет совместную работу фильтрации и пагинации.
     /// </summary>
     [Fact]
-    public void GetAll_ShouldApplyCombinedFiltering()
+    public async Task GetAll_ShouldApplyCombinedFiltering()
     {
         // Arrange
         var service = CreateService();
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Встреча backend",
-            StartAt = new DateTime(2026, 4, 10, 9, 0, 0),
-            EndAt = new DateTime(2026, 4, 10, 10, 0, 0)
+            StartAt = Utc(2026, 4, 10, 9, 0, 0),
+            EndAt = Utc(2026, 4, 10, 10, 0, 0)
         });
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Встреча frontend",
-            StartAt = new DateTime(2026, 4, 11, 9, 0, 0),
-            EndAt = new DateTime(2026, 4, 11, 10, 0, 0)
+            StartAt = Utc(2026, 4, 11, 9, 0, 0),
+            EndAt = Utc(2026, 4, 11, 10, 0, 0)
         });
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Созвон backend",
-            StartAt = new DateTime(2026, 4, 12, 9, 0, 0),
-            EndAt = new DateTime(2026, 4, 12, 10, 0, 0)
+            StartAt = Utc(2026, 4, 12, 9, 0, 0),
+            EndAt = Utc(2026, 4, 12, 10, 0, 0)
         });
 
         // Act
-        var result = service.GetAll(new EventQueryDto
+        var result = await service.GetAllAsync(new EventQueryDto
         {
             Title = "встреча",
-            From = new DateTime(2026, 4, 10, 0, 0, 0),
-            To = new DateTime(2026, 4, 11, 23, 59, 59),
+            From = Utc(2026, 4, 10, 0, 0, 0),
+            To = Utc(2026, 4, 11, 23, 59, 59),
             Page = 1,
             PageSize = 1
         });
@@ -321,25 +359,22 @@ public class EventServiceTests
     /// Проверяет, что попытка получить событие по несуществующему идентификатору приводит к исключению.
     /// </summary>
     [Fact]
-    public void GetById_ShouldThrowNotFoundException_WhenEventDoesNotExist()
+    public async Task GetById_ShouldThrowNotFoundException_WhenEventDoesNotExist()
     {
         // Arrange
         var service = CreateService();
         var id = Guid.NewGuid();
 
         // Act
-        Action act = () => service.GetById(id);
-
         // Assert
-        act.Should().Throw<NotFoundException>()
-            .WithMessage($"*{id}*");
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetByIdAsync(id));
     }
 
     /// <summary>
     /// Проверяет, что попытка обновить несуществующее событие приводит к исключению.
     /// </summary>
     [Fact]
-    public void Update_ShouldThrowNotFoundException_WhenEventDoesNotExist()
+    public async Task Update_ShouldThrowNotFoundException_WhenEventDoesNotExist()
     {
         // Arrange
         var service = CreateService();
@@ -348,16 +383,35 @@ public class EventServiceTests
         var dto = new UpdateEventDto
         {
             Title = "Обновление",
-            StartAt = new DateTime(2026, 4, 15, 10, 0, 0),
-            EndAt = new DateTime(2026, 4, 15, 11, 0, 0)
+            StartAt = Utc(2026, 4, 15, 10, 0, 0),
+            EndAt = Utc(2026, 4, 15, 11, 0, 0)
         };
 
         // Act
-        Action act = () => service.Update(id, dto);
-
         // Assert
-        act.Should().Throw<NotFoundException>()
-            .WithMessage($"*{id}*");
+        await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateAsync(id, dto));
+    }
+
+    /// <summary>
+    /// Проверяет, что отмена токена приводит к прерыванию операции.
+    /// </summary>
+    [Fact]
+    public async Task CreateAsync_ShouldThrowOperationCanceled_WhenTokenIsCancelled()
+    {
+        // Arrange
+        var service = CreateService();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var dto = new CreateEventDto
+        {
+            Title = "Отменяемое событие",
+            StartAt = Utc(2026, 4, 16, 10, 0, 0),
+            EndAt = Utc(2026, 4, 16, 11, 0, 0)
+        };
+
+        // Act + Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.CreateAsync(dto, cts.Token));
     }
 
     /// <summary>
@@ -394,8 +448,8 @@ public class EventServiceTests
         var dto = new UpdateEventDto
         {
             Title = "Некорректное событие",
-            StartAt = new DateTime(2026, 4, 20, 12, 0, 0),
-            EndAt = new DateTime(2026, 4, 20, 11, 0, 0)
+            StartAt = Utc(2026, 4, 20, 12, 0, 0),
+            EndAt = Utc(2026, 4, 20, 11, 0, 0)
         };
 
         // Act
@@ -408,12 +462,43 @@ public class EventServiceTests
     }
 
     /// <summary>
+    /// Проверяет валидацию query DTO, если дата начала позже даты окончания.
+    /// </summary>
+    [Fact]
+    public void EventQueryDto_ShouldBeInvalid_WhenFromLaterThanTo()
+    {
+        // Arrange
+        var dto = new EventQueryDto
+        {
+            From = Utc(2026, 5, 1, 0, 0, 0),
+            To = Utc(2026, 1, 1, 0, 0, 0)
+        };
+
+        // Act
+        var results = ValidateModel(dto);
+
+        // Assert
+        results.Should().ContainSingle(x =>
+            x.MemberNames.Contains(nameof(EventQueryDto.From)) &&
+            x.MemberNames.Contains(nameof(EventQueryDto.To)) &&
+            x.ErrorMessage == "Дата начала не может быть позже даты окончания");
+    }
+
+    /// <summary>
     /// Создает экземпляр сервиса для тестов.
     /// </summary>
     private static EventService CreateService()
     {
         var repository = new InMemoryEventRepository();
         return new EventService(repository);
+    }
+
+    /// <summary>
+    /// Создает UTC DateTimeOffset для тестовых данных.
+    /// </summary>
+    private static DateTimeOffset Utc(int year, int month, int day, int hour, int minute, int second)
+    {
+        return new DateTimeOffset(year, month, day, hour, minute, second, TimeSpan.Zero);
     }
 
     /// <summary>
@@ -427,5 +512,51 @@ public class EventServiceTests
         Validator.TryValidateObject(model, context, results, validateAllProperties: true);
 
         return results;
+    }
+
+    private sealed class DetachedEventRepository : IEventRepository
+    {
+        private Event? stored;
+
+        public int UpdateCalls { get; private set; }
+
+        public IEnumerable<Event> GetAll()
+        {
+            return stored is null ? [] : [Clone(stored)];
+        }
+
+        public Event? GetById(Guid id)
+        {
+            return stored is not null && stored.Id == id ? Clone(stored) : null;
+        }
+
+        public void Add(Event entity)
+        {
+            stored = Clone(entity);
+        }
+
+        public void Update(Event entity)
+        {
+            UpdateCalls++;
+            stored = Clone(entity);
+        }
+
+        public void Delete(Event entity)
+        {
+            if (stored is not null && stored.Id == entity.Id)
+            {
+                stored = null;
+            }
+        }
+
+        private static Event Clone(Event source)
+        {
+            var clone = new Event(source.Title, source.Description, source.StartAt, source.EndAt);
+            typeof(Event)
+                .GetProperty(nameof(Event.Id), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)!
+                .GetSetMethod(nonPublic: true)!
+                .Invoke(clone, new object[] { source.Id });
+            return clone;
+        }
     }
 }

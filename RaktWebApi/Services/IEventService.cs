@@ -1,4 +1,5 @@
 ﻿using RaktWebApi.Models;
+using RaktWebApi.Models.DTO;
 
 namespace RaktWebApi.Services;
 
@@ -10,25 +11,25 @@ public interface IEventService
     /// <summary>
     /// Возвращает список событий с учетом фильтрации и пагинации.
     /// </summary>
-    PaginatedResult<Event> GetAll(EventQueryDto query);
+    Task<PaginatedResult<Event>> GetAllAsync(EventQueryDto query, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Возвращает событие по идентификатору.
     /// </summary>
-    Event GetById(Guid id);
+    Task<Event> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Создает новое событие.
     /// </summary>
-    Event Create(CreateEventDto dto);
+    Task<Event> CreateAsync(CreateEventDto dto, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Обновляет существующее событие.
     /// </summary>
-    void Update(Guid id, UpdateEventDto dto);
+    Task UpdateAsync(Guid id, UpdateEventDto dto, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Удаляет событие по идентификатору.
     /// </summary>
-    void Delete(Guid id);
+    Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }

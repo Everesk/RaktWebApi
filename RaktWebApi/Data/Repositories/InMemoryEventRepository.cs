@@ -1,48 +1,43 @@
-﻿using RaktWebApi.Models;
+using System.Collections.Concurrent;
+using RaktWebApi.Models;
 
 namespace RaktWebApi.Data.Repositories;
 
 /// <summary>
-/// Хранение событий в памяти. Реализация репозитория для работы с событиями, которая использует список для хранения данных.
+/// Хранение событий в памяти.
+/// Реализация репозитория для работы с событиями, которая использует ConcurrentDictionary.
 /// </summary>
 public class InMemoryEventRepository : IEventRepository
 {
-    private readonly List<Event> events = [];
-    private readonly Lock _lock = new();
+    private readonly ConcurrentDictionary<Guid, Event> events = new();
 
     /// <inheritdoc />
     public IEnumerable<Event> GetAll()
     {
-        using (_lock.EnterScope())
-        {
-            return events.ToList();
-        }
+        return [.. events.Values];
     }
 
     /// <inheritdoc />
     public Event? GetById(Guid id)
     {
-        using (_lock.EnterScope())
-        {
-            return events.FirstOrDefault(e => e.Id == id);
-        }
+        return events.TryGetValue(id, out var eventEntity) ? eventEntity : null;
     }
 
     /// <inheritdoc />
     public void Add(Event entity)
     {
-        using (_lock.EnterScope())
-        {
-            events.Add(entity);
-        }
+        events[entity.Id] = entity;
+    }
+
+    /// <inheritdoc />
+    public void Update(Event entity)
+    {
+        events[entity.Id] = entity;
     }
 
     /// <inheritdoc />
     public void Delete(Event entity)
     {
-        using (_lock.EnterScope())
-        {
-            events.Remove(entity);
-        }
+        events.TryRemove(entity.Id, out _);
     }
 }
