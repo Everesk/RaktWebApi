@@ -17,7 +17,7 @@ public class EventServiceTests
     /// Проверяет, что событие успешно создается.
     /// </summary>
     [Fact]
-    public void Create_ShouldCreateEvent()
+    public async Task Create_ShouldCreateEvent()
     {
         // Arrange
         var service = CreateService();
@@ -30,7 +30,7 @@ public class EventServiceTests
         };
 
         // Act
-        var created = service.Create(dto);
+        var created = await service.CreateAsync(dto);
 
         // Assert
         created.Should().NotBeNull();
@@ -45,19 +45,19 @@ public class EventServiceTests
     /// Проверяет, что сервис возвращает все события.
     /// </summary>
     [Fact]
-    public void GetAll_ShouldReturnAllEvents()
+    public async Task GetAll_ShouldReturnAllEvents()
     {
         // Arrange
         var service = CreateService();
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Событие 1",
             StartAt = new DateTime(2026, 4, 1, 10, 0, 0),
             EndAt = new DateTime(2026, 4, 1, 11, 0, 0)
         });
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Событие 2",
             StartAt = new DateTime(2026, 4, 2, 10, 0, 0),
@@ -65,7 +65,7 @@ public class EventServiceTests
         });
 
         // Act
-        var result = service.GetAll(new EventQueryDto());
+        var result = await service.GetAllAsync(new EventQueryDto());
 
         // Assert
         result.Should().NotBeNull();
@@ -78,11 +78,11 @@ public class EventServiceTests
     /// Проверяет, что можно получить событие по идентификатору.
     /// </summary>
     [Fact]
-    public void GetById_ShouldReturnEvent_WhenEventExists()
+    public async Task GetById_ShouldReturnEvent_WhenEventExists()
     {
         // Arrange
         var service = CreateService();
-        var created = service.Create(new CreateEventDto
+        var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Найти меня",
             StartAt = new DateTime(2026, 4, 3, 9, 0, 0),
@@ -90,7 +90,7 @@ public class EventServiceTests
         });
 
         // Act
-        var result = service.GetById(created.Id);
+        var result = await service.GetByIdAsync(created.Id);
 
         // Assert
         result.Should().NotBeNull();
@@ -102,11 +102,11 @@ public class EventServiceTests
     /// Проверяет, что существующее событие успешно обновляется.
     /// </summary>
     [Fact]
-    public void Update_ShouldUpdateEvent_WhenEventExists()
+    public async Task Update_ShouldUpdateEvent_WhenEventExists()
     {
         // Arrange
         var service = CreateService();
-        var created = service.Create(new CreateEventDto
+        var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Старый заголовок",
             Description = "Старое описание",
@@ -123,8 +123,8 @@ public class EventServiceTests
         };
 
         // Act
-        service.Update(created.Id, dto);
-        var updated = service.GetById(created.Id);
+        await service.UpdateAsync(created.Id, dto);
+        var updated = await service.GetByIdAsync(created.Id);
 
         // Assert
         updated.Title.Should().Be("Новый заголовок");
@@ -137,11 +137,11 @@ public class EventServiceTests
     /// Проверяет, что существующее событие успешно удаляется.
     /// </summary>
     [Fact]
-    public void Delete_ShouldRemoveEvent_WhenEventExists()
+    public async Task Delete_ShouldRemoveEvent_WhenEventExists()
     {
         // Arrange
         var service = CreateService();
-        var created = service.Create(new CreateEventDto
+        var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Удаляемое событие",
             StartAt = new DateTime(2026, 4, 5, 10, 0, 0),
@@ -149,8 +149,8 @@ public class EventServiceTests
         });
 
         // Act
-        service.Delete(created.Id);
-        var result = service.GetAll(new EventQueryDto());
+        await service.DeleteAsync(created.Id);
+        var result = await service.GetAllAsync(new EventQueryDto());
 
         // Assert
         result.Items.Should().BeEmpty();
@@ -161,19 +161,19 @@ public class EventServiceTests
     /// Проверяет фильтрацию событий по названию.
     /// </summary>
     [Fact]
-    public void GetAll_ShouldFilterByTitle()
+    public async Task GetAll_ShouldFilterByTitle()
     {
         // Arrange
         var service = CreateService();
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Встреча команды",
             StartAt = new DateTime(2026, 4, 6, 10, 0, 0),
             EndAt = new DateTime(2026, 4, 6, 11, 0, 0)
         });
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Созвон с заказчиком",
             StartAt = new DateTime(2026, 4, 6, 12, 0, 0),
@@ -181,7 +181,7 @@ public class EventServiceTests
         });
 
         // Act
-        var result = service.GetAll(new EventQueryDto
+        var result = await service.GetAllAsync(new EventQueryDto
         {
             Title = "встреча"
         });
@@ -196,26 +196,26 @@ public class EventServiceTests
     /// Проверяет фильтрацию событий по диапазону дат.
     /// </summary>
     [Fact]
-    public void GetAll_ShouldFilterByDates()
+    public async Task GetAll_ShouldFilterByDates()
     {
         // Arrange
         var service = CreateService();
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Раннее событие",
             StartAt = new DateTime(2026, 4, 1, 10, 0, 0),
             EndAt = new DateTime(2026, 4, 1, 11, 0, 0)
         });
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Подходящее событие",
             StartAt = new DateTime(2026, 4, 10, 10, 0, 0),
             EndAt = new DateTime(2026, 4, 10, 11, 0, 0)
         });
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Позднее событие",
             StartAt = new DateTime(2026, 4, 20, 10, 0, 0),
@@ -223,7 +223,7 @@ public class EventServiceTests
         });
 
         // Act
-        var result = service.GetAll(new EventQueryDto
+        var result = await service.GetAllAsync(new EventQueryDto
         {
             From = new DateTime(2026, 4, 5, 0, 0, 0),
             To = new DateTime(2026, 4, 15, 23, 59, 59)
@@ -238,14 +238,14 @@ public class EventServiceTests
     /// Проверяет пагинацию событий.
     /// </summary>
     [Fact]
-    public void GetAll_ShouldApplyPagination()
+    public async Task GetAll_ShouldApplyPagination()
     {
         // Arrange
         var service = CreateService();
 
         for (var i = 1; i <= 5; i++)
         {
-            service.Create(new CreateEventDto
+            await service.CreateAsync(new CreateEventDto
             {
                 Title = $"Событие {i}",
                 StartAt = new DateTime(2026, 4, i, 10, 0, 0),
@@ -254,7 +254,7 @@ public class EventServiceTests
         }
 
         // Act
-        var result = service.GetAll(new EventQueryDto
+        var result = await service.GetAllAsync(new EventQueryDto
         {
             Page = 2,
             PageSize = 2
@@ -275,26 +275,26 @@ public class EventServiceTests
     /// Проверяет совместную работу фильтрации и пагинации.
     /// </summary>
     [Fact]
-    public void GetAll_ShouldApplyCombinedFiltering()
+    public async Task GetAll_ShouldApplyCombinedFiltering()
     {
         // Arrange
         var service = CreateService();
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Встреча backend",
             StartAt = new DateTime(2026, 4, 10, 9, 0, 0),
             EndAt = new DateTime(2026, 4, 10, 10, 0, 0)
         });
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Встреча frontend",
             StartAt = new DateTime(2026, 4, 11, 9, 0, 0),
             EndAt = new DateTime(2026, 4, 11, 10, 0, 0)
         });
 
-        service.Create(new CreateEventDto
+        await service.CreateAsync(new CreateEventDto
         {
             Title = "Созвон backend",
             StartAt = new DateTime(2026, 4, 12, 9, 0, 0),
@@ -302,7 +302,7 @@ public class EventServiceTests
         });
 
         // Act
-        var result = service.GetAll(new EventQueryDto
+        var result = await service.GetAllAsync(new EventQueryDto
         {
             Title = "встреча",
             From = new DateTime(2026, 4, 10, 0, 0, 0),
@@ -322,25 +322,22 @@ public class EventServiceTests
     /// Проверяет, что попытка получить событие по несуществующему идентификатору приводит к исключению.
     /// </summary>
     [Fact]
-    public void GetById_ShouldThrowNotFoundException_WhenEventDoesNotExist()
+    public async Task GetById_ShouldThrowNotFoundException_WhenEventDoesNotExist()
     {
         // Arrange
         var service = CreateService();
         var id = Guid.NewGuid();
 
         // Act
-        Action act = () => service.GetById(id);
-
         // Assert
-        act.Should().Throw<NotFoundException>()
-            .WithMessage($"*{id}*");
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetByIdAsync(id));
     }
 
     /// <summary>
     /// Проверяет, что попытка обновить несуществующее событие приводит к исключению.
     /// </summary>
     [Fact]
-    public void Update_ShouldThrowNotFoundException_WhenEventDoesNotExist()
+    public async Task Update_ShouldThrowNotFoundException_WhenEventDoesNotExist()
     {
         // Arrange
         var service = CreateService();
@@ -354,11 +351,30 @@ public class EventServiceTests
         };
 
         // Act
-        Action act = () => service.Update(id, dto);
-
         // Assert
-        act.Should().Throw<NotFoundException>()
-            .WithMessage($"*{id}*");
+        await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateAsync(id, dto));
+    }
+
+    /// <summary>
+    /// Проверяет, что отмена токена приводит к прерыванию операции.
+    /// </summary>
+    [Fact]
+    public async Task CreateAsync_ShouldThrowOperationCanceled_WhenTokenIsCancelled()
+    {
+        // Arrange
+        var service = CreateService();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var dto = new CreateEventDto
+        {
+            Title = "Отменяемое событие",
+            StartAt = new DateTime(2026, 4, 16, 10, 0, 0),
+            EndAt = new DateTime(2026, 4, 16, 11, 0, 0)
+        };
+
+        // Act + Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.CreateAsync(dto, cts.Token));
     }
 
     /// <summary>

@@ -21,9 +21,9 @@ public class EventsController(
     /// <returns>Постраничный список событий.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(PaginatedResult<Event>), StatusCodes.Status200OK)]
-    public ActionResult<PaginatedResult<Event>> GetAll([FromQuery] EventQueryDto query)
+    public async Task<ActionResult<PaginatedResult<Event>>> GetAll([FromQuery] EventQueryDto query, CancellationToken cancellationToken)
     {
-        var events = eventService.GetAll(query);
+        var events = await eventService.GetAllAsync(query, cancellationToken);
 
         logger.LogInformation("Запрошен список событий с параметрами: {@Query}", query);
 
@@ -36,9 +36,9 @@ public class EventsController(
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(Event), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public ActionResult<Event> GetById(Guid id)
+    public async Task<ActionResult<Event>> GetById(Guid id, CancellationToken cancellationToken)
     {
-        var entity = eventService.GetById(id);
+        var entity = await eventService.GetByIdAsync(id, cancellationToken);
 
         logger.LogInformation("Запрошено событие с Id {Id}", entity.Id);
 
@@ -51,9 +51,9 @@ public class EventsController(
     [HttpPost]
     [ProducesResponseType(typeof(Event), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public ActionResult<Event> Create([FromBody] CreateEventDto dto)
+    public async Task<ActionResult<Event>> Create([FromBody] CreateEventDto dto, CancellationToken cancellationToken)
     {
-        var created = eventService.Create(dto);
+        var created = await eventService.CreateAsync(dto, cancellationToken);
 
         logger.LogInformation("Создано событие с Id {Id}", created.Id);
 
@@ -67,9 +67,9 @@ public class EventsController(
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult Update(Guid id, [FromBody] UpdateEventDto dto)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateEventDto dto, CancellationToken cancellationToken)
     {
-        eventService.Update(id, dto);
+        await eventService.UpdateAsync(id, dto, cancellationToken);
 
         logger.LogInformation("Обновлено событие с Id {Id}", id);
 
@@ -82,9 +82,9 @@ public class EventsController(
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        eventService.Delete(id);
+        await eventService.DeleteAsync(id, cancellationToken);
 
         logger.LogInformation("Удалено событие с Id {Id}", id);
 

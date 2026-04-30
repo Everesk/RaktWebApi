@@ -15,8 +15,10 @@ public class EventService(IEventRepository repository) : IEventService
     /// <summary>
     /// Возвращает список событий с учетом фильтров и пагинации.
     /// </summary>
-    public PaginatedResult<Event> GetAll(EventQueryDto query)
+    public Task<PaginatedResult<Event>> GetAllAsync(EventQueryDto query, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var events = repository.GetAll().AsQueryable(); // не обязательно конечно AsQueryable, но пускай будет на будущее
 
         // Фильтрация
@@ -49,64 +51,74 @@ public class EventService(IEventRepository repository) : IEventService
                 .Take(pageSize)
                 .ToList();
 
-            return new PaginatedResult<Event>
+            return Task.FromResult(new PaginatedResult<Event>
             {
                 TotalCount = totalCount,
                 Items = items,
                 Page = page,
                 PageSize = pageSize,
                 CurrentCount = items.Count
-            };
+            });
         }
 
         // без пагинации (т.е. хотя бы один из параметров не указан)
         var allItems = events.ToList();
 
-        return new PaginatedResult<Event>
+        return Task.FromResult(new PaginatedResult<Event>
         {
             TotalCount = totalCount,
             Items = allItems,
             Page = 1,
             PageSize = allItems.Count,
             CurrentCount = allItems.Count
-        };
+        });
     }
 
     /// <summary>
     /// Возвращает событие по идентификатору.
     /// </summary>
-    public Event GetById(Guid id)
+    public Task<Event> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var existingEvent = repository.GetById(id);
 
-        return existingEvent ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
+        return Task.FromResult(existingEvent ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено."));
     }
 
     /// <summary>
     /// Создает новое событие.
     /// </summary>
-    public Event Create(CreateEventDto dto)
+    public Task<Event> CreateAsync(CreateEventDto dto, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var entity = dto.CreateFromDto();
         repository.Add(entity);
-        return entity;
+        return Task.FromResult(entity);
     }
 
     /// <summary>
     /// Обновляет существующее событие.
     /// </summary>
-    public void Update(Guid id, UpdateEventDto dto)
+    public Task UpdateAsync(Guid id, UpdateEventDto dto, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var existingEvent = repository.GetById(id) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
         existingEvent.UpdateFromDto(dto);
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Удаляет событие по идентификатору.
     /// </summary>
-    public void Delete(Guid id)
+    public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var existingEvent = repository.GetById(id) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
         repository.Delete(existingEvent);
+        return Task.CompletedTask;
     }
 }
