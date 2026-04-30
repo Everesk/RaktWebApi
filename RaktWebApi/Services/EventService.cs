@@ -19,7 +19,7 @@ public class EventService(IEventRepository repository) : IEventService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var events = repository.GetAll().AsQueryable(); // не обязательно конечно AsQueryable, но пускай будет на будущее
+        var events = repository.GetAll().AsQueryable();
 
         // Фильтрация
         if (!string.IsNullOrWhiteSpace(query.Title))
@@ -37,6 +37,12 @@ public class EventService(IEventRepository repository) : IEventService
         {
             events = events.Where(e => e.EndAt <= query.To.Value);
         }
+
+        //Дефолтная сортировка
+        events = events
+            .OrderBy(e => e.StartAt)
+            .ThenBy(e => e.Title)
+            .ThenBy(e => e.Id);
 
         var totalCount = events.Count();
 

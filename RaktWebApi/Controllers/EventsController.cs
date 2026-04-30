@@ -18,6 +18,7 @@ public class EventsController(
     /// Возвращает список событий с учетом фильтрации и пагинации.
     /// </summary>
     /// <param name="query">Параметры фильтрации и пагинации событий.</param>
+    /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
     /// <returns>Постраничный список событий.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(PaginatedResult<Event>), StatusCodes.Status200OK)]
