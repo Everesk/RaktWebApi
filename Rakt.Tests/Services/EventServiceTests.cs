@@ -425,6 +425,29 @@ public class EventServiceTests
     }
 
     /// <summary>
+    /// Проверяет валидацию query DTO, если дата начала позже даты окончания.
+    /// </summary>
+    [Fact]
+    public void EventQueryDto_ShouldBeInvalid_WhenFromLaterThanTo()
+    {
+        // Arrange
+        var dto = new EventQueryDto
+        {
+            From = new DateTime(2026, 5, 1, 0, 0, 0),
+            To = new DateTime(2026, 1, 1, 0, 0, 0)
+        };
+
+        // Act
+        var results = ValidateModel(dto);
+
+        // Assert
+        results.Should().ContainSingle(x =>
+            x.MemberNames.Contains(nameof(EventQueryDto.From)) &&
+            x.MemberNames.Contains(nameof(EventQueryDto.To)) &&
+            x.ErrorMessage == "Дата начала не может быть позже даты окончания");
+    }
+
+    /// <summary>
     /// Создает экземпляр сервиса для тестов.
     /// </summary>
     private static EventService CreateService()
