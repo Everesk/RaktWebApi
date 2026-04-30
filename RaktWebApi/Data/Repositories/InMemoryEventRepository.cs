@@ -30,6 +30,12 @@ public class InMemoryEventRepository : IEventRepository
     }
 
     /// <inheritdoc />
+    public void Update(Event entity)
+    {
+        events[entity.Id] = entity;
+    }
+
+    /// <inheritdoc />
     public void Delete(Event entity)
     {
         events.TryRemove(entity.Id, out _);

@@ -134,6 +134,43 @@ public class EventServiceTests
     }
 
     /// <summary>
+    /// Проверяет, что обновление проходит через репозиторий, а не зависит от общей ссылки на объект.
+    /// </summary>
+    [Fact]
+    public async Task Update_ShouldPersistChangesViaRepositoryUpdate()
+    {
+        // Arrange
+        var repository = new DetachedEventRepository();
+        var service = new EventService(repository);
+        var created = await service.CreateAsync(new CreateEventDto
+        {
+            Title = "Исходный заголовок",
+            Description = "Исходное описание",
+            StartAt = Utc(2026, 4, 4, 10, 0, 0),
+            EndAt = Utc(2026, 4, 4, 11, 0, 0)
+        });
+
+        var dto = new UpdateEventDto
+        {
+            Title = "Обновленный заголовок",
+            Description = "Обновленное описание",
+            StartAt = Utc(2026, 4, 4, 12, 0, 0),
+            EndAt = Utc(2026, 4, 4, 13, 0, 0)
+        };
+
+        // Act
+        await service.UpdateAsync(created.Id, dto);
+        var updated = await service.GetByIdAsync(created.Id);
+
+        // Assert
+        repository.UpdateCalls.Should().Be(1);
+        updated.Title.Should().Be(dto.Title);
+        updated.Description.Should().Be(dto.Description);
+        updated.StartAt.Should().Be(dto.StartAt);
+        updated.EndAt.Should().Be(dto.EndAt);
+    }
+
+    /// <summary>
     /// Проверяет, что существующее событие успешно удаляется.
     /// </summary>
     [Fact]
@@ -475,5 +512,51 @@ public class EventServiceTests
         Validator.TryValidateObject(model, context, results, validateAllProperties: true);
 
         return results;
+    }
+
+    private sealed class DetachedEventRepository : IEventRepository
+    {
+        private Event? stored;
+
+        public int UpdateCalls { get; private set; }
+
+        public IEnumerable<Event> GetAll()
+        {
+            return stored is null ? [] : [Clone(stored)];
+        }
+
+        public Event? GetById(Guid id)
+        {
+            return stored is not null && stored.Id == id ? Clone(stored) : null;
+        }
+
+        public void Add(Event entity)
+        {
+            stored = Clone(entity);
+        }
+
+        public void Update(Event entity)
+        {
+            UpdateCalls++;
+            stored = Clone(entity);
+        }
+
+        public void Delete(Event entity)
+        {
+            if (stored is not null && stored.Id == entity.Id)
+            {
+                stored = null;
+            }
+        }
+
+        private static Event Clone(Event source)
+        {
+            var clone = new Event(source.Title, source.Description, source.StartAt, source.EndAt);
+            typeof(Event)
+                .GetProperty(nameof(Event.Id), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)!
+                .GetSetMethod(nonPublic: true)!
+                .Invoke(clone, new object[] { source.Id });
+            return clone;
+        }
     }
 }

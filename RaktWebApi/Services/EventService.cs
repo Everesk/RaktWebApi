@@ -113,6 +113,7 @@ public class EventService(IEventRepository repository) : IEventService
 
         var existingEvent = repository.GetById(id) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
         existingEvent.UpdateFromDto(dto);
+        repository.Update(existingEvent);
         return Task.CompletedTask;
     }
 

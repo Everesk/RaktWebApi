@@ -24,6 +24,11 @@ public interface IEventRepository
     void Add(Event entity);
 
     /// <summary>
+    /// Обновляет существующее событие.
+    /// </summary>
+    void Update(Event entity);
+
+    /// <summary>
     /// Удаляет событие.
     /// </summary>
     void Delete(Event entity);
