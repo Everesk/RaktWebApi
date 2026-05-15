@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using RaktWebApi.Common.Exceptions;
 using RaktWebApi.Data.Repositories;
 using RaktWebApi.Models;
@@ -18,10 +19,18 @@ public class BookingService(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (eventRepository.GetById(eventId) is null)
+        var eventEntity = eventRepository.GetById(eventId);
+        if (eventEntity is null)
         {
             throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
         }
+
+        if (!eventEntity.TryReserveSeats())
+        {
+            throw new ValidationException($"На событие с идентификатором '{eventId}' нет свободных мест.");
+        }
+
+        eventRepository.Update(eventEntity);
 
         var booking = new Booking(eventId);
         bookingRepository.Add(booking);

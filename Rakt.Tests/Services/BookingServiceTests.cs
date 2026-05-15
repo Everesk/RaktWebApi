@@ -1,4 +1,5 @@
 using FluentAssertions;
+using System.ComponentModel.DataAnnotations;
 using RaktWebApi.Common.Exceptions;
 using RaktWebApi.Data.Repositories;
 using RaktWebApi.Models;
@@ -38,6 +39,7 @@ public class BookingServiceTests
         booking.Status.Should().Be(BookingStatus.Pending);
         booking.ProcessedAt.Should().BeNull();
         booking.CreatedAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(2));
+        eventRepository.GetById(eventEntity.Id)!.AvailableSeats.Should().Be(9);
     }
 
     /// <summary>
@@ -190,6 +192,29 @@ public class BookingServiceTests
     }
 
     /// <summary>
+    /// Проверяет, что сервис не создает бронь, если свободные места закончились.
+    /// </summary>
+    [Fact]
+    public async Task CreateBookingAsync_ShouldThrowValidationException_WhenNoSeatsAvailable()
+    {
+        // Arrange
+        var eventRepository = new InMemoryEventRepository();
+        var eventEntity = CreateEvent(totalSeats: 1);
+        eventRepository.Add(eventEntity);
+        var service = CreateService(eventRepository);
+
+        await service.CreateBookingAsync(eventEntity.Id);
+
+        // Act
+        Func<Task> act = async () => await service.CreateBookingAsync(eventEntity.Id);
+
+        // Assert
+        await act.Should().ThrowAsync<ValidationException>()
+            .WithMessage($"*{eventEntity.Id}*");
+        eventRepository.GetById(eventEntity.Id)!.AvailableSeats.Should().Be(0);
+    }
+
+    /// <summary>
     /// Создает экземпляр сервиса для тестов.
     /// </summary>
     private static BookingService CreateService(InMemoryEventRepository eventRepository)
@@ -201,12 +226,13 @@ public class BookingServiceTests
     /// <summary>
     /// Создает событие для тестов.
     /// </summary>
-    private static Event CreateEvent()
+    private static Event CreateEvent(int totalSeats = 10)
     {
         return new Event(
             title: "Тестовое событие",
             description: null,
             startAt: Utc(2026, 4, 1, 10, 0, 0),
-            endAt: Utc(2026, 4, 1, 11, 0, 0));
+            endAt: Utc(2026, 4, 1, 11, 0, 0),
+            totalSeats: totalSeats);
     }
 }

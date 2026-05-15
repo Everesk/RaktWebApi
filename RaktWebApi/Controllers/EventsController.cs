@@ -72,9 +72,9 @@ public class EventsController(
     /// Создает новое событие.
     /// </summary>
     [HttpPost]
-    [ProducesResponseType(typeof(Event), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(EventInfoDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<Event>> Create([FromBody] CreateEventDto dto, CancellationToken cancellationToken)
+    public async Task<ActionResult<EventInfoDto>> Create([FromBody] CreateEventDto dto, CancellationToken cancellationToken)
     {
         var created = await eventService.CreateAsync(dto, cancellationToken);
 

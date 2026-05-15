@@ -95,13 +95,13 @@ public class EventService(IEventRepository repository) : IEventService
     /// <summary>
     /// Создает новое событие.
     /// </summary>
-    public Task<Event> CreateAsync(CreateEventDto dto, CancellationToken cancellationToken = default)
+    public Task<EventInfoDto> CreateAsync(CreateEventDto dto, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var entity = dto.CreateFromDto();
         repository.Add(entity);
-        return Task.FromResult(entity);
+        return Task.FromResult(entity.ToInfoDto());
     }
 
     /// <summary>

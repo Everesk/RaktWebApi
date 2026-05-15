@@ -131,7 +131,8 @@ public class BookingBackgroundServiceTests
             title: "Тестовое событие",
             description: null,
             startAt: Utc(2026, 4, 1, 10, 0, 0),
-            endAt: Utc(2026, 4, 1, 11, 0, 0));
+            endAt: Utc(2026, 4, 1, 11, 0, 0),
+            totalSeats: 10);
     }
 
     private sealed class CountingThrowingBookingProcessor(IBookingRepository bookingRepository) : IBookingProcessor
