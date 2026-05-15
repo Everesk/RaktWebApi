@@ -24,7 +24,7 @@ public class BookingServiceTests
     {
         // Arrange
         var eventRepository = new InMemoryEventRepository();
-        var eventEntity = CreateEvent();
+        var eventEntity = CreateTestEvent();
         eventRepository.Add(eventEntity);
         var service = CreateService(eventRepository);
 
@@ -49,20 +49,23 @@ public class BookingServiceTests
     {
         // Arrange
         var eventRepository = new InMemoryEventRepository();
-        var eventEntity = CreateEvent();
+        var eventEntity = CreateTestEvent(totalSeats: 3);
         eventRepository.Add(eventEntity);
         var service = CreateService(eventRepository);
 
         // Act
-        var first = await service.CreateBookingAsync(eventEntity.Id);
-        var second = await service.CreateBookingAsync(eventEntity.Id);
+        var bookings = new[]
+        {
+            await service.CreateBookingAsync(eventEntity.Id),
+            await service.CreateBookingAsync(eventEntity.Id),
+            await service.CreateBookingAsync(eventEntity.Id)
+        };
 
         // Assert
-        first.Id.Should().NotBe(second.Id);
-        first.EventId.Should().Be(eventEntity.Id);
-        second.EventId.Should().Be(eventEntity.Id);
-        first.Status.Should().Be(BookingStatus.Pending);
-        second.Status.Should().Be(BookingStatus.Pending);
+        bookings.Select(x => x.Id).Should().OnlyHaveUniqueItems();
+        bookings.Should().OnlyContain(x => x.EventId == eventEntity.Id);
+        bookings.Should().OnlyContain(x => x.Status == BookingStatus.Pending);
+        eventRepository.GetById(eventEntity.Id)!.AvailableSeats.Should().Be(0);
     }
 
     /// <summary>
@@ -73,7 +76,7 @@ public class BookingServiceTests
     {
         // Arrange
         var eventRepository = new InMemoryEventRepository();
-        var eventEntity = CreateEvent();
+        var eventEntity = CreateTestEvent();
         eventRepository.Add(eventEntity);
         var service = CreateService(eventRepository);
         var created = await service.CreateBookingAsync(eventEntity.Id);
@@ -95,7 +98,7 @@ public class BookingServiceTests
     {
         // Arrange
         var eventRepository = new InMemoryEventRepository();
-        var eventEntity = CreateEvent();
+        var eventEntity = CreateTestEvent();
         eventRepository.Add(eventEntity);
         var service = CreateService(eventRepository);
         var created = await service.CreateBookingAsync(eventEntity.Id);
@@ -118,7 +121,7 @@ public class BookingServiceTests
     {
         // Arrange
         var eventRepository = new InMemoryEventRepository();
-        var eventEntity = CreateEvent();
+        var eventEntity = CreateTestEvent();
         eventRepository.Add(eventEntity);
         var service = CreateService(eventRepository);
         var created = await service.CreateBookingAsync(eventEntity.Id);
@@ -131,6 +134,54 @@ public class BookingServiceTests
         // Assert
         booking.Status.Should().Be(BookingStatus.Rejected);
         booking.ProcessedAt.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Проверяет, что после отклонения брони можно вернуть место в пул события.
+    /// </summary>
+    [Fact]
+    public async Task ReleaseSeats_ShouldRestoreAvailableSeats_AfterBookingRejected()
+    {
+        // Arrange
+        var eventRepository = new InMemoryEventRepository();
+        var eventEntity = CreateTestEvent(totalSeats: 1);
+        eventRepository.Add(eventEntity);
+        var service = CreateService(eventRepository);
+        var created = await service.CreateBookingAsync(eventEntity.Id);
+
+        // Act
+        created.Reject(DateTimeOffset.UtcNow);
+        eventEntity.ReleaseSeats();
+
+        // Assert
+        created.Status.Should().Be(BookingStatus.Rejected);
+        created.ProcessedAt.Should().NotBeNull();
+        eventRepository.GetById(eventEntity.Id)!.AvailableSeats.Should().Be(1);
+    }
+
+    /// <summary>
+    /// Проверяет, что после отклонения и возврата места можно создать новую бронь.
+    /// </summary>
+    [Fact]
+    public async Task CreateBookingAsync_ShouldCreateNewBooking_AfterRejectedBookingReleasesSeat()
+    {
+        // Arrange
+        var eventRepository = new InMemoryEventRepository();
+        var eventEntity = CreateTestEvent(totalSeats: 1);
+        eventRepository.Add(eventEntity);
+        var service = CreateService(eventRepository);
+        var rejectedBooking = await service.CreateBookingAsync(eventEntity.Id);
+
+        rejectedBooking.Reject(DateTimeOffset.UtcNow);
+        eventEntity.ReleaseSeats();
+
+        // Act
+        var newBooking = await service.CreateBookingAsync(eventEntity.Id);
+
+        // Assert
+        newBooking.Id.Should().NotBe(rejectedBooking.Id);
+        newBooking.Status.Should().Be(BookingStatus.Pending);
+        eventRepository.GetById(eventEntity.Id)!.AvailableSeats.Should().Be(0);
     }
 
     /// <summary>
@@ -177,7 +228,7 @@ public class BookingServiceTests
     {
         // Arrange
         var eventRepository = new InMemoryEventRepository();
-        var eventEntity = CreateEvent();
+        var eventEntity = CreateTestEvent();
         eventRepository.Add(eventEntity);
         eventRepository.Delete(eventEntity);
         var service = CreateService(eventRepository);
@@ -198,7 +249,7 @@ public class BookingServiceTests
     {
         // Arrange
         var eventRepository = new InMemoryEventRepository();
-        var eventEntity = CreateEvent(totalSeats: 1);
+        var eventEntity = CreateTestEvent(totalSeats: 1);
         eventRepository.Add(eventEntity);
         var service = CreateService(eventRepository);
 
@@ -216,36 +267,68 @@ public class BookingServiceTests
     /// <summary>
     /// Проверяет, что конкурентные запросы не создают броней больше, чем доступно мест.
     /// </summary>
-    [Fact]
-    public async Task CreateBookingAsync_ShouldNotOverbook_WhenRequestsAreConcurrent()
+    private const int OverbookingTotalSeats = 5;
+    private const int OverbookingRequestCount = 20;
+
+    [Theory]
+    [InlineData(OverbookingTotalSeats, OverbookingRequestCount)]
+    public async Task CreateBookingAsync_ShouldNotOverbook_WhenRequestsAreConcurrent(int totalSeats, int requestCount)
     {
         // Arrange
         var eventRepository = new InMemoryEventRepository();
-        var eventEntity = CreateEvent(totalSeats: 1);
+        var eventEntity = CreateTestEvent(totalSeats: totalSeats);
         eventRepository.Add(eventEntity);
         var service = CreateService(eventRepository);
 
         // Act
-        var attempts = Enumerable.Range(0, 10)
+        var attempts = Enumerable.Range(0, requestCount)
             .Select(_ => Task.Run(async () =>
             {
                 try
                 {
                     await service.CreateBookingAsync(eventEntity.Id);
-                    return true;
+                    return (Success: true, Exception: (Exception?)null);
                 }
-                catch (NoAvailableSeatsException)
+                catch (Exception ex)
                 {
-                    return false;
+                    return (Success: false, Exception: ex);
                 }
             }));
 
         var results = await Task.WhenAll(attempts);
 
         // Assert
-        results.Count(x => x).Should().Be(1);
-        results.Count(x => !x).Should().Be(9);
+        results.Count(x => x.Success).Should().Be(totalSeats);
+        results.Count(x => x.Exception is NoAvailableSeatsException).Should().Be(requestCount - totalSeats);
         eventRepository.GetById(eventEntity.Id)!.AvailableSeats.Should().Be(0);
+    }
+
+    /// <summary>
+    /// Проверяет, что конкурентные успешные запросы создают брони с уникальными идентификаторами.
+    /// </summary>
+    private const int UniqueIdsTotalSeats = 10;
+    private const int UniqueIdsRequestCount = 10;
+
+    [Theory]
+    [InlineData(UniqueIdsTotalSeats, UniqueIdsRequestCount)]
+    public async Task CreateBookingAsync_ShouldCreateUniqueIds_WhenConcurrentRequestsFitSeatsLimit(int totalSeats, int requestCount)
+    {
+        // Arrange
+        var eventRepository = new InMemoryEventRepository();
+        var eventEntity = CreateTestEvent(totalSeats: totalSeats);
+        eventRepository.Add(eventEntity);
+        var service = CreateService(eventRepository);
+
+        // Act
+        var tasks = Enumerable.Range(0, requestCount)
+            .Select(_ => Task.Run(() => service.CreateBookingAsync(eventEntity.Id)));
+
+        var bookings = await Task.WhenAll(tasks);
+
+        // Assert
+        bookings.Should().HaveCount(requestCount);
+        bookings.Select(x => x.Id).Should().OnlyHaveUniqueItems();
+        eventRepository.GetById(eventEntity.Id)!.AvailableSeats.Should().Be(totalSeats - requestCount);
     }
 
     /// <summary>
@@ -260,7 +343,7 @@ public class BookingServiceTests
     /// <summary>
     /// Создает событие для тестов.
     /// </summary>
-    private static Event CreateEvent(int totalSeats = 10)
+    private static Event CreateTestEvent(int totalSeats = 10)
     {
         return new Event(
             title: "Тестовое событие",
