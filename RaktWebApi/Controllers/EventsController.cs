@@ -54,6 +54,7 @@ public class EventsController(
     [HttpPost("{id:guid}/book")]
     [ProducesResponseType(typeof(BookingDto), StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<BookingDto>> CreateBooking(Guid id, CancellationToken cancellationToken)
     {
         var booking = await bookingService.CreateBookingAsync(id, cancellationToken);
@@ -69,12 +70,30 @@ public class EventsController(
     }
 
     /// <summary>
+    /// Возвращает все бронирования указанного события.
+    /// </summary>
+    [HttpGet("{id:guid}/bookings")]
+    [ProducesResponseType(typeof(IReadOnlyCollection<BookingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyCollection<BookingDto>>> GetBookings(Guid id, CancellationToken cancellationToken)
+    {
+        var bookings = await bookingService.GetBookingsByEventIdAsync(id, cancellationToken);
+        var dto = bookings
+            .Select(booking => booking.ToDto())
+            .ToList();
+
+        logger.LogInformation("Запрошены брони события {EventId}. Количество: {Count}", id, dto.Count);
+
+        return Ok(dto);
+    }
+
+    /// <summary>
     /// Создает новое событие.
     /// </summary>
     [HttpPost]
-    [ProducesResponseType(typeof(Event), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(EventInfoDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<Event>> Create([FromBody] CreateEventDto dto, CancellationToken cancellationToken)
+    public async Task<ActionResult<EventInfoDto>> Create([FromBody] CreateEventDto dto, CancellationToken cancellationToken)
     {
         var created = await eventService.CreateAsync(dto, cancellationToken);
 

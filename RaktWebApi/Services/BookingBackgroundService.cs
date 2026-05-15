@@ -54,65 +54,71 @@ public sealed class BookingBackgroundService(
             .Where(booking => booking.Status == BookingStatus.Pending)
             .ToList();
 
-        foreach (var booking in pendingBookings)
+        var tasks = pendingBookings.Select(booking => ProcessBookingAsync(booking, cancellationToken));
+        await Task.WhenAll(tasks);
+    }
+
+    /// <summary>
+    /// Обрабатывает одну бронь.
+    /// </summary>
+    private async Task ProcessBookingAsync(Booking booking, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!TryMarkProcessing(booking.Id))
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            return;
+        }
 
-            if (!TryMarkProcessing(booking.Id))
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var bookingProcessor = scope.ServiceProvider.GetRequiredService<IBookingProcessor>();
+
+            await bookingProcessor.ProcessAsync(booking, cancellationToken);
+            ClearAttempts(booking.Id);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            var attempt = RegisterAttempt(booking.Id);
+            logger.LogError(
+                ex,
+                "Не удалось обработать бронь {BookingId} на попытке {Attempt} из {AttemptsLimit}",
+                booking.Id,
+                attempt,
+                attemptsLimit);
+
+            if (attempt < attemptsLimit)
             {
-                continue;
+                return;
             }
 
-            try
-            {
-                using var scope = scopeFactory.CreateScope();
-                var bookingProcessor = scope.ServiceProvider.GetRequiredService<IBookingProcessor>();
+            using var scope = scopeFactory.CreateScope();
+            var bookingProcessor = scope.ServiceProvider.GetRequiredService<IBookingProcessor>();
 
-                await bookingProcessor.ProcessAsync(booking, cancellationToken);
+            var rejected = await bookingProcessor.TryRejectAsync(booking, cancellationToken);
+            if (rejected)
+            {
                 ClearAttempts(booking.Id);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                var attempt = RegisterAttempt(booking.Id);
-                logger.LogError(
-                    ex,
-                    "Не удалось обработать бронь {BookingId} на попытке {Attempt} из {AttemptsLimit}",
+                logger.LogWarning(
+                    "Бронь {BookingId} отклонена после {AttemptsLimit} неудачных попыток",
                     booking.Id,
-                    attempt,
                     attemptsLimit);
-
-                if (attempt < attemptsLimit)
-                {
-                    continue;
-                }
-
-                using var scope = scopeFactory.CreateScope();
-                var bookingProcessor = scope.ServiceProvider.GetRequiredService<IBookingProcessor>();
-
-                var rejected = await bookingProcessor.TryRejectAsync(booking, cancellationToken);
-                if (rejected)
-                {
-                    ClearAttempts(booking.Id);
-                    logger.LogWarning(
-                        "Бронь {BookingId} отклонена после {AttemptsLimit} неудачных попыток",
-                        booking.Id,
-                        attemptsLimit);
-                }
-                else
-                {
-                    logger.LogError(
-                        "Не удалось ни обработать ни отклонить бронь {BookingId}",
-                        booking.Id); // Тупик, с бронью не удается ничего сделать и она повисла в репозитории навечно в статусе Pending. Тут надо вызывать алярм сисадмину
-                }
             }
-            finally
+            else
             {
-                UnmarkProcessing(booking.Id);
+                logger.LogError(
+                    "Не удалось ни обработать ни отклонить бронь {BookingId}",
+                    booking.Id); // Тупик, с бронью не удается ничего сделать и она повисла в репозитории навечно в статусе Pending. Тут надо вызывать алярм сисадмину
             }
+        }
+        finally
+        {
+            UnmarkProcessing(booking.Id);
         }
     }
 

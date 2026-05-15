@@ -11,6 +11,8 @@ public class BookingService(
     IBookingRepository bookingRepository,
     IEventRepository eventRepository) : IBookingService
 {
+    private readonly static object BookingLock = new();
+
     /// <summary>
     /// Создает бронирование для указанного события.
     /// </summary>
@@ -18,15 +20,26 @@ public class BookingService(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (eventRepository.GetById(eventId) is null)
+        lock (BookingLock)
         {
-            throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
+            var eventEntity = eventRepository.GetById(eventId);
+            if (eventEntity is null)
+            {
+                throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
+            }
+
+            if (!eventEntity.TryReserveSeats())
+            {
+                throw new NoAvailableSeatsException("Мест нет, уйдите");
+            }
+
+            eventRepository.Update(eventEntity);
+
+            var booking = new Booking(eventId);
+            bookingRepository.Add(booking);
+
+            return Task.FromResult(booking);
         }
-
-        var booking = new Booking(eventId);
-        bookingRepository.Add(booking);
-
-        return Task.FromResult(booking);
     }
 
     /// <summary>
@@ -40,5 +53,25 @@ public class BookingService(
 
         return Task.FromResult(
             booking ?? throw new NotFoundException($"Бронь с идентификатором '{bookingId}' не найдена."));
+    }
+
+    /// <summary>
+    /// Возвращает все бронирования для указанного события.
+    /// </summary>
+    public Task<IReadOnlyCollection<Booking>> GetBookingsByEventIdAsync(Guid eventId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (eventRepository.GetById(eventId) is null)
+        {
+            throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
+        }
+
+        var bookings = bookingRepository
+            .GetAll()
+            .Where(booking => booking.EventId == eventId)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyCollection<Booking>>(bookings);
     }
 }

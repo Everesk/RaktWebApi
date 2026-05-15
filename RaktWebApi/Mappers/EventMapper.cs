@@ -22,7 +22,30 @@ public static class EventMapper
         if (!dto.EndAt.HasValue)
             throw new ArgumentException("Не указано время окончания события", nameof(dto));
 
-        return new Event(dto.Title, dto.Description, dto.StartAt.Value, dto.EndAt.Value);
+        if (!dto.TotalSeats.HasValue)
+            throw new ArgumentException("Не указано количество мест на событии", nameof(dto));
+
+        return Event.Create(dto.Title, dto.Description, dto.StartAt.Value, dto.EndAt.Value, dto.TotalSeats.Value);
+    }
+
+    /// <summary>
+    /// Преобразует Event в EventInfoDto.
+    /// </summary>
+    public static EventInfoDto ToInfoDto(this Event entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        return new EventInfoDto
+        {
+            Id = entity.Id,
+            Title = entity.Title,
+            Description = entity.Description,
+            StartAt = entity.StartAt,
+            EndAt = entity.EndAt,
+            TotalSeats = entity.TotalSeats,
+            AvailableSeats = entity.AvailableSeats,
+            IsFull = entity.IsFull
+        };
     }
 
     /// <summary>

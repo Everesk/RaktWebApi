@@ -1,11 +1,11 @@
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using RaktWebApi.Data.Repositories;
-using RaktWebApi.Options;
 using RaktWebApi.Models;
+using RaktWebApi.Options;
 using RaktWebApi.Services;
 
 namespace Rakt.Tests.Services;
@@ -37,8 +37,9 @@ public class BookingBackgroundServiceTests
 
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton<IEventRepository>(eventRepository);
         services.AddSingleton<IBookingRepository>(bookingRepository);
-        services.AddScoped<IBookingProcessor, BookingProcessor>();
+        services.AddSingleton<IBookingProcessor, BookingProcessor>();
         services.AddOptions<BookingProcessingOptions>().Configure(options => options.AttemptsLimit = 3);
         await using var provider = services.BuildServiceProvider();
 
@@ -49,6 +50,7 @@ public class BookingBackgroundServiceTests
             NullLogger<BookingBackgroundService>.Instance);
 
         using var cts = new CancellationTokenSource();
+
         // Act
         await service.StartAsync(cts.Token);
 
@@ -63,6 +65,58 @@ public class BookingBackgroundServiceTests
         completed.Should().BeTrue("фоновая обработка должна завершиться в течение 30 секунд");
         processed.Should().NotBeNull();
         processed!.Status.Should().Be(BookingStatus.Confirmed);
+        processed.ProcessedAt.Should().NotBeNull();
+
+        await cts.CancelAsync();
+        await service.StopAsync(CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Проверяет, что бронь отклоняется, если событие удалено до фоновой обработки.
+    /// </summary>
+    [Fact]
+    public async Task BackgroundService_ShouldRejectBooking_WhenEventWasDeletedBeforeProcessing()
+    {
+        // Arrange
+        var eventRepository = new InMemoryEventRepository();
+        var eventEntity = CreateEvent();
+        eventRepository.Add(eventEntity);
+
+        var bookingRepository = new InMemoryBookingRepository();
+        var booking = new Booking(eventEntity.Id);
+        bookingRepository.Add(booking);
+        eventRepository.Delete(eventEntity);
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IEventRepository>(eventRepository);
+        services.AddSingleton<IBookingRepository>(bookingRepository);
+        services.AddSingleton<IBookingProcessor, BookingProcessor>();
+        services.AddOptions<BookingProcessingOptions>().Configure(options => options.AttemptsLimit = 3);
+        await using var provider = services.BuildServiceProvider();
+
+        var service = new BookingBackgroundService(
+            bookingRepository,
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<IOptions<BookingProcessingOptions>>(),
+            NullLogger<BookingBackgroundService>.Instance);
+
+        using var cts = new CancellationTokenSource();
+
+        // Act
+        await service.StartAsync(cts.Token);
+
+        Booking? processed = null;
+        var completed = SpinWait.SpinUntil(() =>
+        {
+            processed = bookingRepository.GetById(booking.Id);
+            return processed?.Status == BookingStatus.Rejected;
+        }, TimeSpan.FromSeconds(30));
+
+        // Assert
+        completed.Should().BeTrue("бронь должна быть отклонена, если событие удалено");
+        processed.Should().NotBeNull();
+        processed!.Status.Should().Be(BookingStatus.Rejected);
         processed.ProcessedAt.Should().NotBeNull();
 
         await cts.CancelAsync();
@@ -131,7 +185,8 @@ public class BookingBackgroundServiceTests
             title: "Тестовое событие",
             description: null,
             startAt: Utc(2026, 4, 1, 10, 0, 0),
-            endAt: Utc(2026, 4, 1, 11, 0, 0));
+            endAt: Utc(2026, 4, 1, 11, 0, 0),
+            totalSeats: 10);
     }
 
     private sealed class CountingThrowingBookingProcessor(IBookingRepository bookingRepository) : IBookingProcessor
