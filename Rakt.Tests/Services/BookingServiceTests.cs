@@ -1,5 +1,4 @@
 using FluentAssertions;
-using System.ComponentModel.DataAnnotations;
 using RaktWebApi.Common.Exceptions;
 using RaktWebApi.Data.Repositories;
 using RaktWebApi.Models;
@@ -195,7 +194,7 @@ public class BookingServiceTests
     /// Проверяет, что сервис не создает бронь, если свободные места закончились.
     /// </summary>
     [Fact]
-    public async Task CreateBookingAsync_ShouldThrowValidationException_WhenNoSeatsAvailable()
+    public async Task CreateBookingAsync_ShouldThrowNoAvailableSeatsException_WhenNoSeatsAvailable()
     {
         // Arrange
         var eventRepository = new InMemoryEventRepository();
@@ -209,8 +208,43 @@ public class BookingServiceTests
         Func<Task> act = async () => await service.CreateBookingAsync(eventEntity.Id);
 
         // Assert
-        await act.Should().ThrowAsync<ValidationException>()
-            .WithMessage($"*{eventEntity.Id}*");
+        await act.Should().ThrowAsync<NoAvailableSeatsException>()
+            .WithMessage("No available seats for this event");
+        eventRepository.GetById(eventEntity.Id)!.AvailableSeats.Should().Be(0);
+    }
+
+    /// <summary>
+    /// Проверяет, что конкурентные запросы не создают броней больше, чем доступно мест.
+    /// </summary>
+    [Fact]
+    public async Task CreateBookingAsync_ShouldNotOverbook_WhenRequestsAreConcurrent()
+    {
+        // Arrange
+        var eventRepository = new InMemoryEventRepository();
+        var eventEntity = CreateEvent(totalSeats: 1);
+        eventRepository.Add(eventEntity);
+        var service = CreateService(eventRepository);
+
+        // Act
+        var attempts = Enumerable.Range(0, 10)
+            .Select(_ => Task.Run(async () =>
+            {
+                try
+                {
+                    await service.CreateBookingAsync(eventEntity.Id);
+                    return true;
+                }
+                catch (NoAvailableSeatsException)
+                {
+                    return false;
+                }
+            }));
+
+        var results = await Task.WhenAll(attempts);
+
+        // Assert
+        results.Count(x => x).Should().Be(1);
+        results.Count(x => !x).Should().Be(9);
         eventRepository.GetById(eventEntity.Id)!.AvailableSeats.Should().Be(0);
     }
 

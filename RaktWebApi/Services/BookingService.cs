@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using RaktWebApi.Common.Exceptions;
 using RaktWebApi.Data.Repositories;
 using RaktWebApi.Models;
@@ -12,6 +11,8 @@ public class BookingService(
     IBookingRepository bookingRepository,
     IEventRepository eventRepository) : IBookingService
 {
+    private readonly object _bookingLock = new();
+
     /// <summary>
     /// Создает бронирование для указанного события.
     /// </summary>
@@ -19,23 +20,26 @@ public class BookingService(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var eventEntity = eventRepository.GetById(eventId);
-        if (eventEntity is null)
+        lock (_bookingLock)
         {
-            throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
+            var eventEntity = eventRepository.GetById(eventId);
+            if (eventEntity is null)
+            {
+                throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
+            }
+
+            if (!eventEntity.TryReserveSeats())
+            {
+                throw new NoAvailableSeatsException("No available seats for this event");
+            }
+
+            eventRepository.Update(eventEntity);
+
+            var booking = new Booking(eventId);
+            bookingRepository.Add(booking);
+
+            return Task.FromResult(booking);
         }
-
-        if (!eventEntity.TryReserveSeats())
-        {
-            throw new ValidationException($"На событие с идентификатором '{eventId}' нет свободных мест.");
-        }
-
-        eventRepository.Update(eventEntity);
-
-        var booking = new Booking(eventId);
-        bookingRepository.Add(booking);
-
-        return Task.FromResult(booking);
     }
 
     /// <summary>
