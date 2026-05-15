@@ -70,6 +70,24 @@ public class EventsController(
     }
 
     /// <summary>
+    /// Возвращает все бронирования указанного события.
+    /// </summary>
+    [HttpGet("{id:guid}/bookings")]
+    [ProducesResponseType(typeof(IReadOnlyCollection<BookingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyCollection<BookingDto>>> GetBookings(Guid id, CancellationToken cancellationToken)
+    {
+        var bookings = await bookingService.GetBookingsByEventIdAsync(id, cancellationToken);
+        var dto = bookings
+            .Select(booking => booking.ToDto())
+            .ToList();
+
+        logger.LogInformation("Запрошены брони события {EventId}. Количество: {Count}", id, dto.Count);
+
+        return Ok(dto);
+    }
+
+    /// <summary>
     /// Создает новое событие.
     /// </summary>
     [HttpPost]

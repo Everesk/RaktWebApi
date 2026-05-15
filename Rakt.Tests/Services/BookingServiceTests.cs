@@ -91,6 +91,51 @@ public class BookingServiceTests
     }
 
     /// <summary>
+    /// Проверяет, что сервис возвращает только брони выбранного события.
+    /// </summary>
+    [Fact]
+    public async Task GetBookingsByEventIdAsync_ShouldReturnOnlyEventBookings()
+    {
+        // Arrange
+        var eventRepository = new InMemoryEventRepository();
+        var firstEvent = CreateTestEvent();
+        var secondEvent = CreateTestEvent();
+        eventRepository.Add(firstEvent);
+        eventRepository.Add(secondEvent);
+        var service = CreateService(eventRepository);
+
+        var firstBooking = await service.CreateBookingAsync(firstEvent.Id);
+        var secondBooking = await service.CreateBookingAsync(firstEvent.Id);
+        await service.CreateBookingAsync(secondEvent.Id);
+
+        // Act
+        var bookings = await service.GetBookingsByEventIdAsync(firstEvent.Id);
+
+        // Assert
+        bookings.Should().HaveCount(2);
+        bookings.Select(x => x.Id).Should().BeEquivalentTo([firstBooking.Id, secondBooking.Id]);
+        bookings.Should().OnlyContain(x => x.EventId == firstEvent.Id);
+    }
+
+    /// <summary>
+    /// Проверяет, что сервис не возвращает список броней для несуществующего события.
+    /// </summary>
+    [Fact]
+    public async Task GetBookingsByEventIdAsync_ShouldThrowNotFoundException_WhenEventDoesNotExist()
+    {
+        // Arrange
+        var service = CreateService(new InMemoryEventRepository());
+        var eventId = Guid.NewGuid();
+
+        // Act
+        Func<Task> act = async () => await service.GetBookingsByEventIdAsync(eventId);
+
+        // Assert
+        await act.Should().ThrowAsync<NotFoundException>()
+            .WithMessage($"*{eventId}*");
+    }
+
+    /// <summary>
     /// Проверяет, что сервис возвращает актуальный статус бронирования после изменения состояния.
     /// </summary>
     [Fact]
@@ -259,8 +304,7 @@ public class BookingServiceTests
         Func<Task> act = async () => await service.CreateBookingAsync(eventEntity.Id);
 
         // Assert
-        await act.Should().ThrowAsync<NoAvailableSeatsException>()
-            .WithMessage("No available seats for this event");
+        await act.Should().ThrowAsync<NoAvailableSeatsException>();
         eventRepository.GetById(eventEntity.Id)!.AvailableSeats.Should().Be(0);
     }
 

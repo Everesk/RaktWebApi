@@ -30,7 +30,7 @@ public class BookingService(
 
             if (!eventEntity.TryReserveSeats())
             {
-                throw new NoAvailableSeatsException("No available seats for this event");
+                throw new NoAvailableSeatsException("Мест нет, уйдите");
             }
 
             eventRepository.Update(eventEntity);
@@ -53,5 +53,25 @@ public class BookingService(
 
         return Task.FromResult(
             booking ?? throw new NotFoundException($"Бронь с идентификатором '{bookingId}' не найдена."));
+    }
+
+    /// <summary>
+    /// Возвращает все бронирования для указанного события.
+    /// </summary>
+    public Task<IReadOnlyCollection<Booking>> GetBookingsByEventIdAsync(Guid eventId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (eventRepository.GetById(eventId) is null)
+        {
+            throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
+        }
+
+        var bookings = bookingRepository
+            .GetAll()
+            .Where(booking => booking.EventId == eventId)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyCollection<Booking>>(bookings);
     }
 }
