@@ -11,7 +11,7 @@ public class BookingService(
     IBookingRepository bookingRepository,
     IEventRepository eventRepository) : IBookingService
 {
-    private readonly object _bookingLock = new();
+    private readonly static object BookingLock = new();
 
     /// <summary>
     /// Создает бронирование для указанного события.
@@ -20,7 +20,7 @@ public class BookingService(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        lock (_bookingLock)
+        lock (BookingLock)
         {
             var eventEntity = eventRepository.GetById(eventId);
             if (eventEntity is null)

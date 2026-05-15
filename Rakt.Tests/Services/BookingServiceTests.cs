@@ -348,6 +348,45 @@ public class BookingServiceTests
     }
 
     /// <summary>
+    /// Проверяет, что разные экземпляры сервиса используют общую блокировку и не создают овербукинг.
+    /// </summary>
+    [Theory]
+    [InlineData(OverbookingTotalSeats, OverbookingRequestCount)]
+    public async Task CreateBookingAsync_ShouldNotOverbook_WhenDifferentServiceInstancesAreConcurrent(int totalSeats, int requestCount)
+    {
+        // Arrange
+        var eventRepository = new InMemoryEventRepository();
+        var bookingRepository = new InMemoryBookingRepository();
+        var eventEntity = CreateTestEvent(totalSeats: totalSeats);
+        eventRepository.Add(eventEntity);
+
+        // Act
+        var attempts = Enumerable.Range(0, requestCount)
+            .Select(_ => Task.Run(async () =>
+            {
+                var service = new BookingService(bookingRepository, eventRepository);
+
+                try
+                {
+                    await service.CreateBookingAsync(eventEntity.Id);
+                    return (Success: true, Exception: (Exception?)null);
+                }
+                catch (Exception ex)
+                {
+                    return (Success: false, Exception: ex);
+                }
+            }));
+
+        var results = await Task.WhenAll(attempts);
+
+        // Assert
+        results.Count(x => x.Success).Should().Be(totalSeats);
+        results.Count(x => x.Exception is NoAvailableSeatsException).Should().Be(requestCount - totalSeats);
+        bookingRepository.GetAll().Should().HaveCount(totalSeats);
+        eventRepository.GetById(eventEntity.Id)!.AvailableSeats.Should().Be(0);
+    }
+
+    /// <summary>
     /// Проверяет, что конкурентные успешные запросы создают брони с уникальными идентификаторами.
     /// </summary>
     private const int UniqueIdsTotalSeats = 10;
