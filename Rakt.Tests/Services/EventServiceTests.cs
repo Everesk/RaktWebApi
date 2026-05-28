@@ -24,6 +24,7 @@ public class EventServiceTests
         var dto = new CreateEventDto
         {
             Title = "Встреча команды",
+            TotalSeats = 10,
             Description = "Обсуждение задач",
             StartAt = Utc(2026, 4, 1, 10, 0, 0),
             EndAt = Utc(2026, 4, 1, 11, 0, 0)
@@ -39,6 +40,59 @@ public class EventServiceTests
         created.Description.Should().Be(dto.Description);
         created.StartAt.Should().Be(dto.StartAt);
         created.EndAt.Should().Be(dto.EndAt);
+        created.TotalSeats.Should().Be(dto.TotalSeats);
+        created.AvailableSeats.Should().Be(dto.TotalSeats);
+        created.IsFull.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Проверяет, что событие не создается с некорректным количеством мест.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Create_ShouldThrowValidationException_WhenTotalSeatsIsNotPositive(int totalSeats)
+    {
+        // Act
+        Action act = () => Event.Create(
+            title: "Некорректное событие",
+            description: null,
+            startAt: Utc(2026, 4, 1, 10, 0, 0),
+            endAt: Utc(2026, 4, 1, 11, 0, 0),
+            totalSeats: totalSeats);
+
+        // Assert
+        act.Should().Throw<ValidationException>();
+    }
+
+    /// <summary>
+    /// Проверяет резервирование и освобождение мест события.
+    /// </summary>
+    [Fact]
+    public void TryReserveSeats_ShouldReserveAndReleaseSeats()
+    {
+        // Arrange
+        var eventEntity = Event.Create(
+            title: "Событие с местами",
+            description: null,
+            startAt: Utc(2026, 4, 1, 10, 0, 0),
+            endAt: Utc(2026, 4, 1, 11, 0, 0),
+            totalSeats: 2);
+
+        // Act
+        var firstReservation = eventEntity.TryReserveSeats();
+        var secondReservation = eventEntity.TryReserveSeats();
+        var isFullAfterReservations = eventEntity.IsFull;
+        var overReservation = eventEntity.TryReserveSeats();
+        eventEntity.ReleaseSeats();
+
+        // Assert
+        firstReservation.Should().BeTrue();
+        secondReservation.Should().BeTrue();
+        isFullAfterReservations.Should().BeTrue();
+        overReservation.Should().BeFalse();
+        eventEntity.AvailableSeats.Should().Be(1);
+        eventEntity.IsFull.Should().BeFalse();
     }
 
     /// <summary>
@@ -53,6 +107,7 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Событие 1",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 1, 10, 0, 0),
             EndAt = Utc(2026, 4, 1, 11, 0, 0)
         });
@@ -60,6 +115,7 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Событие 2",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 2, 10, 0, 0),
             EndAt = Utc(2026, 4, 2, 11, 0, 0)
         });
@@ -85,6 +141,7 @@ public class EventServiceTests
         var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Найти меня",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 3, 9, 0, 0),
             EndAt = Utc(2026, 4, 3, 10, 0, 0)
         });
@@ -109,6 +166,7 @@ public class EventServiceTests
         var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Старый заголовок",
+            TotalSeats = 10,
             Description = "Старое описание",
             StartAt = Utc(2026, 4, 4, 10, 0, 0),
             EndAt = Utc(2026, 4, 4, 11, 0, 0)
@@ -145,6 +203,7 @@ public class EventServiceTests
         var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Исходный заголовок",
+            TotalSeats = 10,
             Description = "Исходное описание",
             StartAt = Utc(2026, 4, 4, 10, 0, 0),
             EndAt = Utc(2026, 4, 4, 11, 0, 0)
@@ -181,6 +240,7 @@ public class EventServiceTests
         var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Удаляемое событие",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 5, 10, 0, 0),
             EndAt = Utc(2026, 4, 5, 11, 0, 0)
         });
@@ -206,6 +266,7 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Встреча команды",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 6, 10, 0, 0),
             EndAt = Utc(2026, 4, 6, 11, 0, 0)
         });
@@ -213,6 +274,7 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Созвон с заказчиком",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 6, 12, 0, 0),
             EndAt = Utc(2026, 4, 6, 13, 0, 0)
         });
@@ -241,6 +303,7 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Раннее событие",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 1, 10, 0, 0),
             EndAt = Utc(2026, 4, 1, 11, 0, 0)
         });
@@ -248,6 +311,7 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Подходящее событие",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 10, 10, 0, 0),
             EndAt = Utc(2026, 4, 10, 11, 0, 0)
         });
@@ -255,6 +319,7 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Позднее событие",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 20, 10, 0, 0),
             EndAt = Utc(2026, 4, 20, 11, 0, 0)
         });
@@ -285,6 +350,7 @@ public class EventServiceTests
             await service.CreateAsync(new CreateEventDto
             {
                 Title = $"Событие {i}",
+                TotalSeats = 10,
                 StartAt = Utc(2026, 4, i, 10, 0, 0),
                 EndAt = Utc(2026, 4, i, 11, 0, 0)
             });
@@ -320,6 +386,7 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Встреча backend",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 10, 9, 0, 0),
             EndAt = Utc(2026, 4, 10, 10, 0, 0)
         });
@@ -327,6 +394,7 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Встреча frontend",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 11, 9, 0, 0),
             EndAt = Utc(2026, 4, 11, 10, 0, 0)
         });
@@ -334,6 +402,7 @@ public class EventServiceTests
         await service.CreateAsync(new CreateEventDto
         {
             Title = "Созвон backend",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 12, 9, 0, 0),
             EndAt = Utc(2026, 4, 12, 10, 0, 0)
         });
@@ -406,6 +475,7 @@ public class EventServiceTests
         var dto = new CreateEventDto
         {
             Title = "Отменяемое событие",
+            TotalSeats = 10,
             StartAt = Utc(2026, 4, 16, 10, 0, 0),
             EndAt = Utc(2026, 4, 16, 11, 0, 0)
         };
@@ -436,6 +506,7 @@ public class EventServiceTests
         results.Should().Contain(x => x.ErrorMessage!.Contains("Заголовок"));
         results.Should().Contain(x => x.ErrorMessage!.Contains("Дата начала"));
         results.Should().Contain(x => x.ErrorMessage!.Contains("Дата окончания"));
+        results.Should().Contain(x => x.ErrorMessage!.Contains("Количество мест"));
     }
 
     /// <summary>
@@ -551,7 +622,11 @@ public class EventServiceTests
 
         private static Event Clone(Event source)
         {
-            var clone = new Event(source.Title, source.Description, source.StartAt, source.EndAt);
+            var clone = new Event(source.Title, source.Description, source.StartAt, source.EndAt, source.TotalSeats);
+            if (source.AvailableSeats < source.TotalSeats)
+            {
+                clone.TryReserveSeats(source.TotalSeats - source.AvailableSeats);
+            }
             typeof(Event)
                 .GetProperty(nameof(Event.Id), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)!
                 .GetSetMethod(nonPublic: true)!

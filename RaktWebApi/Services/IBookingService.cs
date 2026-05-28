@@ -16,4 +16,9 @@ public interface IBookingService
     /// Возвращает бронирование по идентификатору.
     /// </summary>
     Task<Booking> GetBookingByIdAsync(Guid bookingId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Возвращает все бронирования для указанного события.
+    /// </summary>
+    Task<IReadOnlyCollection<Booking>> GetBookingsByEventIdAsync(Guid eventId, CancellationToken cancellationToken = default);
 }

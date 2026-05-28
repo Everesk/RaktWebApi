@@ -50,10 +50,42 @@ public class EventBaseDto : IValidatableObject
 }
 
 /// <summary>
-/// DTO для создания события. Пока ничем не отличается от базового. 
+/// DTO для создания события.
 /// </summary>
 public class CreateEventDto : EventBaseDto
 {
+    /// <summary>
+    /// Общее количество мест на событии.
+    /// </summary>
+    [Required(ErrorMessage = "Количество мест обязательно")]
+    [Range(1, int.MaxValue, ErrorMessage = "Количество мест должно быть больше нуля")]
+    public int? TotalSeats { get; set; }
+}
+
+/// <summary>
+/// DTO с информацией о событии.
+/// </summary>
+public class EventInfoDto : EventBaseDto
+{
+    /// <summary>
+    /// Уникальный идентификатор события.
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Общее количество мест на событии.
+    /// </summary>
+    public int TotalSeats { get; set; }
+
+    /// <summary>
+    /// Текущее количество свободных мест.
+    /// </summary>
+    public int AvailableSeats { get; set; }
+
+    /// <summary>
+    /// Признак того, что свободных мест на событии больше нет.
+    /// </summary>
+    public bool IsFull { get; set; }
 }
 
 /// <summary>

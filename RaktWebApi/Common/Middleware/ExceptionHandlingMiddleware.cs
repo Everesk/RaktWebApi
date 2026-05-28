@@ -66,6 +66,7 @@ public sealed class ExceptionHandlingMiddleware(
     {
         return exception switch
         {
+            NoAvailableSeatsException => (int)HttpStatusCode.Conflict,
             ValidationException => (int)HttpStatusCode.BadRequest,
             NotFoundException => (int)HttpStatusCode.NotFound,
             BadHttpRequestException => (int)HttpStatusCode.BadRequest,

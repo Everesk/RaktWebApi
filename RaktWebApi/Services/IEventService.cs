@@ -21,7 +21,7 @@ public interface IEventService
     /// <summary>
     /// Создает новое событие.
     /// </summary>
-    Task<Event> CreateAsync(CreateEventDto dto, CancellationToken cancellationToken = default);
+    Task<EventInfoDto> CreateAsync(CreateEventDto dto, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Обновляет существующее событие.

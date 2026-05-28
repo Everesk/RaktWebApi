@@ -55,7 +55,7 @@ public static class WebApplicationBuilderExtensions
         builder.Services.AddSingleton<IBookingRepository, InMemoryBookingRepository>();
         builder.Services.AddScoped<IEventService, EventService>();
         builder.Services.AddScoped<IBookingService, BookingService>();
-        builder.Services.AddScoped<IBookingProcessor, BookingProcessor>();
+        builder.Services.AddSingleton<IBookingProcessor, BookingProcessor>();
         builder.Services.AddHostedService<BookingBackgroundService>();
         return builder;
     }
