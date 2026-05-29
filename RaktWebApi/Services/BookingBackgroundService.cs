@@ -51,7 +51,7 @@ public sealed class BookingBackgroundService(
         cancellationToken.ThrowIfCancellationRequested();
 
         List<Guid> pendingBookingIds;
-        using (var scope = scopeFactory.CreateScope())
+        await using (var scope = scopeFactory.CreateAsyncScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             pendingBookingIds = await context.Bookings
@@ -79,7 +79,7 @@ public sealed class BookingBackgroundService(
 
         try
         {
-            using var scope = scopeFactory.CreateScope();
+            await using var scope = scopeFactory.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var booking = await context.Bookings
                 .FirstOrDefaultAsync(item => item.Id == bookingId, cancellationToken);
@@ -140,7 +140,7 @@ public sealed class BookingBackgroundService(
     /// </summary>
     private async Task<bool> TryRejectBookingAsync(Guid bookingId, CancellationToken cancellationToken)
     {
-        using var scope = scopeFactory.CreateScope();
+        await using var scope = scopeFactory.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var booking = await context.Bookings
             .FirstOrDefaultAsync(item => item.Id == bookingId, cancellationToken);

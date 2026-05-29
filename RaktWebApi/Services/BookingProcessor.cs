@@ -40,7 +40,7 @@ public sealed class BookingProcessor : IBookingProcessor
         await ProcessingSemaphore.WaitAsync(cancellationToken);
         try
         {
-            using var scope = _scopeFactory.CreateScope();
+            await using var scope = _scopeFactory.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var trackedBooking = await context.Bookings
                 .FirstOrDefaultAsync(item => item.Id == booking.Id, cancellationToken);
@@ -94,7 +94,7 @@ public sealed class BookingProcessor : IBookingProcessor
             await ProcessingSemaphore.WaitAsync(cancellationToken);
             try
             {
-                using var scope = _scopeFactory.CreateScope();
+                await using var scope = _scopeFactory.CreateAsyncScope();
                 var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var trackedBooking = await context.Bookings
                     .FirstOrDefaultAsync(item => item.Id == booking.Id, cancellationToken);
