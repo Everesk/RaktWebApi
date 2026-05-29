@@ -6,6 +6,11 @@ namespace RaktWebApi.Models;
 public class Booking
 {
     /// <summary>
+    /// Навигационная ссылка на связанное событие.
+    /// </summary>
+    public Event Event { get; private set; } = null!;
+
+    /// <summary>
     /// Уникальный идентификатор бронирования.
     /// </summary>
     public Guid Id { get; private set; } = Guid.NewGuid();
@@ -38,6 +43,13 @@ public class Booking
         EventId = eventId;
         Status = BookingStatus.Pending;
         CreatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Приватный конструктор для EF Core.
+    /// </summary>
+    private Booking()
+    {
     }
 
     /// <summary>
