@@ -23,8 +23,8 @@ public class EventsController(
     /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
     /// <returns>Постраничный список событий.</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(PaginatedResult<Event>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<PaginatedResult<Event>>> GetAll([FromQuery] EventQueryDto query, CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(PaginatedResult<EventInfoDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PaginatedResult<EventInfoDto>>> GetAll([FromQuery] EventQueryDto query, CancellationToken cancellationToken)
     {
         var events = await eventService.GetAllAsync(query, cancellationToken);
 
@@ -37,9 +37,9 @@ public class EventsController(
     /// Возвращает событие по идентификатору.
     /// </summary>
     [HttpGet("{id:guid}")]
-    [ProducesResponseType(typeof(Event), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(EventInfoDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Event>> GetById(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<EventInfoDto>> GetById(Guid id, CancellationToken cancellationToken)
     {
         var entity = await eventService.GetByIdAsync(id, cancellationToken);
 

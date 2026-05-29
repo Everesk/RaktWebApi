@@ -26,7 +26,7 @@ public sealed class EventService : IEventService
     /// <summary>
     /// Возвращает список событий с учетом фильтров и пагинации.
     /// </summary>
-    public async Task<PaginatedResult<Event>> GetAllAsync(EventQueryDto query, CancellationToken cancellationToken = default)
+    public async Task<PaginatedResult<EventInfoDto>> GetAllAsync(EventQueryDto query, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -57,10 +57,10 @@ public sealed class EventService : IEventService
         var totalCount = filteredEvents.Count();
         var items = ApplyPaging(filteredEvents, query);
 
-        return new PaginatedResult<Event>
+        return new PaginatedResult<EventInfoDto>
         {
             TotalCount = totalCount,
-            Items = items,
+            Items = items.Select(e => e.ToInfoDto()).ToList(),
             Page = query.Page ?? 1,
             PageSize = query.PageSize ?? items.Count,
             CurrentCount = items.Count
@@ -70,14 +70,14 @@ public sealed class EventService : IEventService
     /// <summary>
     /// Возвращает событие по идентификатору.
     /// </summary>
-    public async Task<Event> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<EventInfoDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var existingEvent = await _context.Events.AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
-        return existingEvent ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
+        return (existingEvent ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.")).ToInfoDto();
     }
 
     /// <summary>
