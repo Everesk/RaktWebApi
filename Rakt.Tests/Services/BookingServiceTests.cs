@@ -5,19 +5,26 @@ using RaktWebApi.Common.Exceptions;
 using RaktWebApi.Data;
 using RaktWebApi.Models;
 using RaktWebApi.Services;
+using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;
 
 /// <summary>
 /// Набор тестов для сервиса <see cref="BookingService"/>.
 /// </summary>
-public class BookingServiceTests : IDisposable
+public class BookingServiceTests : InMemoryDbTestBase
 {
-    private readonly string _dbName = Guid.NewGuid().ToString();
-    private ServiceProvider? _serviceProvider;
-
     private const int OverbookingTotalSeats = 5;
     private const int OverbookingRequestCount = 20;
+
+    /// <summary>
+    /// Настраивает сервисы, необходимые для тестов <see cref="BookingService"/>.
+    /// </summary>
+    /// <param name="services">Коллекция сервисов DI.</param>
+    protected override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IBookingService, BookingService>();
+    }
 
     /// <summary>
     /// Проверяет, что сервис создает бронирование с ожидаемыми значениями по умолчанию.
@@ -270,7 +277,6 @@ public class BookingServiceTests : IDisposable
     {
         // Arrange
         var eventEntity = await SeedEventAsync(totalSeats: totalSeats);
-        EnsureProvider();
 
         // Act
         var attempts = Enumerable.Range(0, requestCount)
@@ -311,7 +317,6 @@ public class BookingServiceTests : IDisposable
     {
         // Arrange
         var eventEntity = await SeedEventAsync(totalSeats: totalSeats);
-        EnsureProvider();
 
         // Act
         var tasks = Enumerable.Range(0, requestCount)
@@ -337,99 +342,9 @@ public class BookingServiceTests : IDisposable
     /// <summary>
     /// Создает экземпляр сервиса для тестов.
     /// </summary>
-    private BookingServiceScope CreateBookingServiceScope()
+    private ScopedService<IBookingService> CreateBookingServiceScope()
     {
-        EnsureProvider();
-        var scope = CreateScope();
-        return new BookingServiceScope(scope);
+        return CreateScopedService<IBookingService>();
     }
 
-    /// <summary>
-    /// Создает новый scope поверх настроенного провайдера.
-    /// </summary>
-    private IServiceScope CreateScope()
-    {
-        EnsureProvider();
-        return _serviceProvider!.CreateScope();
-    }
-
-    /// <summary>
-    /// Подготавливает InMemory-провайдер для текущего теста.
-    /// </summary>
-    private void EnsureProvider()
-    {
-        if (_serviceProvider is not null)
-        {
-            return;
-        }
-
-        var services = new ServiceCollection();
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseInMemoryDatabase(_dbName));
-        services.AddScoped<IBookingService, BookingService>();
-
-        _serviceProvider = services.BuildServiceProvider();
-    }
-
-    /// <summary>
-    /// Создает событие для тестов.
-    /// </summary>
-    private async Task<Event> SeedEventAsync(int totalSeats = 10, string title = "Тестовое событие")
-    {
-        using var scope = CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var eventEntity = new Event(
-            title: title,
-            description: null,
-            startAt: new DateTimeOffset(2026, 4, 1, 10, 0, 0, TimeSpan.Zero),
-            endAt: new DateTimeOffset(2026, 4, 1, 11, 0, 0, TimeSpan.Zero),
-            totalSeats: totalSeats);
-
-        await context.Events.AddAsync(eventEntity);
-        await context.SaveChangesAsync();
-
-        return eventEntity;
-    }
-
-    /// <summary>
-    /// Освобождает ресурсы, созданные для тестовой композиции.
-    /// </summary>
-    public void Dispose()
-    {
-        _serviceProvider?.Dispose();
-    }
-
-    /// <summary>
-    /// Обертка для scoped-сервиса бронирований.
-    /// </summary>
-    private sealed class BookingServiceScope : IDisposable
-    {
-        /// <summary>
-        /// Создает обертку над scope.
-        /// </summary>
-        /// <param name="scope">Активный scope DI.</param>
-        public BookingServiceScope(IServiceScope scope)
-        {
-            Scope = scope;
-            Service = scope.ServiceProvider.GetRequiredService<IBookingService>();
-        }
-
-        /// <summary>
-        /// Активный scope DI.
-        /// </summary>
-        public IServiceScope Scope { get; }
-
-        /// <summary>
-        /// Экземпляр сервиса бронирований.
-        /// </summary>
-        public IBookingService Service { get; }
-
-        /// <summary>
-        /// Освобождает scope.
-        /// </summary>
-        public void Dispose()
-        {
-            Scope.Dispose();
-        }
-    }
 }

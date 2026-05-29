@@ -4,16 +4,25 @@ using Microsoft.Extensions.DependencyInjection;
 using RaktWebApi.Data;
 using RaktWebApi.Models;
 using RaktWebApi.Services;
+using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;
 
 /// <summary>
 /// Тесты для обработчика бронирований.
 /// </summary>
-public class BookingProcessorTests : IDisposable
+public class BookingProcessorTests : InMemoryDbTestBase
 {
-    private readonly string _dbName = Guid.NewGuid().ToString();
-    private ServiceProvider? _serviceProvider;
+    /// <summary>
+    /// Настраивает сервисы, необходимые для тестов <see cref="BookingProcessor"/>.
+    /// </summary>
+    /// <param name="services">Коллекция сервисов DI.</param>
+    protected override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IBookingService, BookingService>();
+        services.AddSingleton<IBookingProcessor, BookingProcessor>();
+        services.AddLogging();
+    }
 
     /// <summary>
     /// Проверяет, что отклонение брони возвращает место в пул события.
@@ -45,68 +54,10 @@ public class BookingProcessorTests : IDisposable
     }
 
     /// <summary>
-    /// Создает событие для теста.
-    /// </summary>
-    private async Task<Event> SeedEventAsync(int totalSeats)
-    {
-        using var scope = CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var eventEntity = new Event(
-            title: "Тестовое событие",
-            description: null,
-            startAt: new DateTimeOffset(2026, 4, 1, 10, 0, 0, TimeSpan.Zero),
-            endAt: new DateTimeOffset(2026, 4, 1, 11, 0, 0, TimeSpan.Zero),
-            totalSeats: totalSeats);
-
-        await context.Events.AddAsync(eventEntity);
-        await context.SaveChangesAsync();
-        return eventEntity;
-    }
-
-    /// <summary>
-    /// Возвращает общий scope для теста.
-    /// </summary>
-    private IServiceScope CreateScope()
-    {
-        EnsureProvider();
-        return _serviceProvider!.CreateScope();
-    }
-
-    /// <summary>
     /// Возвращает singleton-обработчик бронирований.
     /// </summary>
     private IBookingProcessor GetProcessor()
     {
-        EnsureProvider();
-        using var scope = CreateScope();
-        return scope.ServiceProvider.GetRequiredService<IBookingProcessor>();
-    }
-
-    /// <summary>
-    /// Подготавливает контейнер DI для текущего теста.
-    /// </summary>
-    private void EnsureProvider()
-    {
-        if (_serviceProvider is not null)
-        {
-            return;
-        }
-
-        var services = new ServiceCollection();
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseInMemoryDatabase(_dbName));
-        services.AddScoped<IBookingService, BookingService>();
-        services.AddSingleton<IBookingProcessor, BookingProcessor>();
-        services.AddLogging();
-
-        _serviceProvider = services.BuildServiceProvider();
-    }
-
-    /// <summary>
-    /// Освобождает ресурсы тестового контейнера.
-    /// </summary>
-    public void Dispose()
-    {
-        _serviceProvider?.Dispose();
+        return GetRequiredService<IBookingProcessor>();
     }
 }

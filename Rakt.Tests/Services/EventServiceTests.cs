@@ -1,23 +1,27 @@
 using System.ComponentModel.DataAnnotations;
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RaktWebApi.Common.Exceptions;
-using RaktWebApi.Data;
 using RaktWebApi.Models;
 using RaktWebApi.Models.DTO;
 using RaktWebApi.Services;
+using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;
 
 /// <summary>
 /// Набор тестов для сервиса <see cref="EventService"/>.
 /// </summary>
-public class EventServiceTests : IDisposable
+public class EventServiceTests : InMemoryDbTestBase
 {
-    private readonly string _dbName = Guid.NewGuid().ToString();
-    private ServiceProvider? _serviceProvider;
-    private IServiceScope? _serviceScope;
+    /// <summary>
+    /// Настраивает сервисы, необходимые для тестов <see cref="EventService"/>.
+    /// </summary>
+    /// <param name="services">Коллекция сервисов DI.</param>
+    protected override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IEventService, EventService>();
+    }
 
     /// <summary>
     /// Проверяет, что событие успешно создается.
@@ -566,33 +570,7 @@ public class EventServiceTests : IDisposable
     /// </summary>
     private IEventService CreateService()
     {
-        var services = new ServiceCollection();
-        var dbName = _dbName;
-
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseInMemoryDatabase(dbName));
-        services.AddScoped<IEventService, EventService>();
-
-        _serviceProvider = services.BuildServiceProvider();
-        _serviceScope = _serviceProvider.CreateScope();
-
-        return _serviceScope.ServiceProvider.GetRequiredService<IEventService>();
-    }
-
-    /// <summary>
-    /// Создает новый scope поверх уже настроенного провайдера.
-    /// </summary>
-    private IServiceScope CreateScope()
-    {
-        return _serviceProvider!.CreateScope();
-    }
-
-    /// <summary>
-    /// Создает UTC DateTimeOffset для тестовых данных.
-    /// </summary>
-    private static DateTimeOffset Utc(int year, int month, int day, int hour, int minute, int second)
-    {
-        return new DateTimeOffset(year, month, day, hour, minute, second, TimeSpan.Zero);
+        return GetRequiredService<IEventService>();
     }
 
     /// <summary>
@@ -608,12 +586,4 @@ public class EventServiceTests : IDisposable
         return results;
     }
 
-    /// <summary>
-    /// Освобождает ресурсы, созданные для тестовой композиции.
-    /// </summary>
-    public void Dispose()
-    {
-        _serviceScope?.Dispose();
-        _serviceProvider?.Dispose();
-    }
 }

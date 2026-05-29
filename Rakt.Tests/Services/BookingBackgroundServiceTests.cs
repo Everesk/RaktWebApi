@@ -7,16 +7,26 @@ using RaktWebApi.Data;
 using RaktWebApi.Models;
 using RaktWebApi.Options;
 using RaktWebApi.Services;
+using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;
 
 /// <summary>
 /// Тесты для фоновой обработки бронирований.
 /// </summary>
-public class BookingBackgroundServiceTests : IDisposable
+public class BookingBackgroundServiceTests : InMemoryDbTestBase
 {
-    private readonly string _dbName = Guid.NewGuid().ToString();
-    private ServiceProvider? _serviceProvider;
+    /// <summary>
+    /// Настраивает сервисы, необходимые для тестов <see cref="BookingBackgroundService"/>.
+    /// </summary>
+    /// <param name="services">Коллекция сервисов DI.</param>
+    protected override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IBookingService, BookingService>();
+        services.AddSingleton<IBookingProcessor, BookingProcessor>();
+        services.AddOptions<BookingProcessingOptions>().Configure(options => options.AttemptsLimit = 3);
+        services.AddLogging();
+    }
 
     /// <summary>
     /// Проверяет, что фоновый сервис переводит Pending-бронь в Confirmed.
@@ -96,20 +106,6 @@ public class BookingBackgroundServiceTests : IDisposable
     }
 
     /// <summary>
-    /// Создает событие для теста.
-    /// </summary>
-    private async Task<Event> SeedEventAsync()
-    {
-        using var scope = CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var eventEntity = CreateEvent();
-
-        await context.Events.AddAsync(eventEntity);
-        await context.SaveChangesAsync();
-        return eventEntity;
-    }
-
-    /// <summary>
     /// Создает Pending-бронь для теста.
     /// </summary>
     private async Task<Booking> CreatePendingBookingAsync(Guid eventId)
@@ -120,21 +116,11 @@ public class BookingBackgroundServiceTests : IDisposable
     }
 
     /// <summary>
-    /// Возвращает общий scope для работы с тестовой базой.
-    /// </summary>
-    private IServiceScope CreateScope()
-    {
-        EnsureProvider();
-        return _serviceProvider!.CreateScope();
-    }
-
-    /// <summary>
     /// Возвращает фабрику scopes для тестового контейнера.
     /// </summary>
     private IServiceScopeFactory CreateScopeFactory()
     {
-        EnsureProvider();
-        return _serviceProvider!.GetRequiredService<IServiceScopeFactory>();
+        return ServiceProvider.GetRequiredService<IServiceScopeFactory>();
     }
 
     /// <summary>
@@ -142,53 +128,9 @@ public class BookingBackgroundServiceTests : IDisposable
     /// </summary>
     private BookingBackgroundService CreateBackgroundService()
     {
-        EnsureProvider();
         return new BookingBackgroundService(
             CreateScopeFactory(),
             Options.Create(new BookingProcessingOptions { AttemptsLimit = 3 }),
             NullLogger<BookingBackgroundService>.Instance);
     }
-
-    /// <summary>
-    /// Подготавливает DI-контейнер для текущего теста.
-    /// </summary>
-    private void EnsureProvider()
-    {
-        if (_serviceProvider is not null)
-        {
-            return;
-        }
-
-        var services = new ServiceCollection();
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseInMemoryDatabase(_dbName));
-        services.AddScoped<IBookingService, BookingService>();
-        services.AddSingleton<IBookingProcessor, BookingProcessor>();
-        services.AddOptions<BookingProcessingOptions>().Configure(options => options.AttemptsLimit = 3);
-        services.AddLogging();
-
-        _serviceProvider = services.BuildServiceProvider();
-    }
-
-    /// <summary>
-    /// Создает событие для теста.
-    /// </summary>
-    private static Event CreateEvent()
-    {
-        return new Event(
-            title: "Тестовое событие",
-            description: null,
-            startAt: new DateTimeOffset(2026, 4, 1, 10, 0, 0, TimeSpan.Zero),
-            endAt: new DateTimeOffset(2026, 4, 1, 11, 0, 0, TimeSpan.Zero),
-            totalSeats: 10);
-    }
-
-    /// <summary>
-    /// Освобождает ресурсы тестового контейнера.
-    /// </summary>
-    public void Dispose()
-    {
-        _serviceProvider?.Dispose();
-    }
-
 }
