@@ -6,7 +6,7 @@ namespace RaktWebApi.Data;
 /// <summary>
 /// Контекст базы данных приложения.
 /// </summary>
-internal sealed class AppDbContext : DbContext
+public sealed class AppDbContext : DbContext
 {
     /// <summary>
     /// Создает контекст базы данных с заданными параметрами подключения.
