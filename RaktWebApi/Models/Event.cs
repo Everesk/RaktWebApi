@@ -8,6 +8,11 @@ namespace RaktWebApi.Models;
 public class Event
 {
     /// <summary>
+    /// Навигационная коллекция связанных бронирований.
+    /// </summary>
+    public ICollection<Booking> Bookings { get; private set; } = new List<Booking>();
+
+    /// <summary>
     /// Уникальный идентификатор события.
     /// </summary>
     public Guid Id { get; private set; } = Guid.NewGuid();
@@ -60,6 +65,14 @@ public class Event
         EndAt = endAt;
         TotalSeats = totalSeats;
         AvailableSeats = totalSeats;
+    }
+
+    /// <summary>
+    /// Приватный конструктор для EF Core.
+    /// </summary>
+    private Event()
+    {
+        Title = null!;
     }
 
     /// <summary>

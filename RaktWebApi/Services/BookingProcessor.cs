@@ -1,4 +1,6 @@
-using RaktWebApi.Data.Repositories;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using RaktWebApi.Data;
 using RaktWebApi.Models;
 
 namespace RaktWebApi.Services;
@@ -6,13 +8,23 @@ namespace RaktWebApi.Services;
 /// <summary>
 /// Обработчик бронирований.
 /// </summary>
-public sealed class BookingProcessor(
-    IBookingRepository bookingRepository,
-    IEventRepository eventRepository,
-    ILogger<BookingProcessor> logger) : IBookingProcessor
+public sealed class BookingProcessor : IBookingProcessor
 {
     private static readonly TimeSpan ExternalSystemDelay = TimeSpan.FromSeconds(2);
-    private readonly SemaphoreSlim _processingSemaphore = new(1, 1);
+    private static readonly SemaphoreSlim ProcessingSemaphore = new(1, 1);
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<BookingProcessor> _logger;
+
+    /// <summary>
+    /// Создает обработчик бронирований.
+    /// </summary>
+    /// <param name="scopeFactory">Фабрика scopes.</param>
+    /// <param name="logger">Логгер обработчика.</param>
+    public BookingProcessor(IServiceScopeFactory scopeFactory, ILogger<BookingProcessor> logger)
+    {
+        _scopeFactory = scopeFactory;
+        _logger = logger;
+    }
 
     /// <summary>
     /// Обрабатывает бронирование в фоне.
@@ -22,77 +34,93 @@ public sealed class BookingProcessor(
         ArgumentNullException.ThrowIfNull(booking);
         cancellationToken.ThrowIfCancellationRequested();
 
-        logger.LogInformation("Начата обработка брони {BookingId}", booking.Id);
-
+        _logger.LogInformation("Начата обработка брони {BookingId}", booking.Id);
         await Task.Delay(ExternalSystemDelay, cancellationToken);
 
-        Event? eventEntity = null;
-        await _processingSemaphore.WaitAsync(cancellationToken);
+        await ProcessingSemaphore.WaitAsync(cancellationToken);
         try
         {
-            eventEntity = eventRepository.GetById(booking.EventId);
-            if (eventEntity is null)
-            {
-                booking.Reject(DateTimeOffset.UtcNow);
-                bookingRepository.Update(booking);
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var trackedBooking = await context.Bookings
+                .FirstOrDefaultAsync(item => item.Id == booking.Id, cancellationToken);
 
-                logger.LogWarning(
-                    "Бронь {BookingId} отклонена, потому что событие {EventId} удалено",
-                    booking.Id,
-                    booking.EventId);
+            if (trackedBooking is null)
+            {
                 return;
             }
 
-            booking.Confirm(DateTimeOffset.UtcNow);
-            bookingRepository.Update(booking);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Непредвиденная ошибка при обработке брони {BookingId}", booking.Id);
+            var eventEntity = await context.Events
+                .FirstOrDefaultAsync(item => item.Id == trackedBooking.EventId, cancellationToken);
 
-            RejectAndReleaseSeats(booking, eventEntity ?? eventRepository.GetById(booking.EventId));
-            logger.LogWarning(
-                "Бронь {BookingId} отклонена после непредвиденной ошибки",
-                booking.Id);
-            return;
+            if (eventEntity is null)
+            {
+                trackedBooking.Reject(DateTimeOffset.UtcNow);
+                await context.SaveChangesAsync(cancellationToken);
+
+                _logger.LogWarning(
+                    "Бронь {BookingId} отклонена, потому что событие {EventId} удалено",
+                    trackedBooking.Id,
+                    trackedBooking.EventId);
+                return;
+            }
+
+            trackedBooking.Confirm(DateTimeOffset.UtcNow);
+            await context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "Бронь {BookingId} переведена в статус {Status}",
+                trackedBooking.Id,
+                trackedBooking.Status);
         }
         finally
         {
-            _processingSemaphore.Release();
+            ProcessingSemaphore.Release();
         }
-
-        logger.LogInformation(
-            "Бронь {BookingId} переведена в статус {Status}",
-            booking.Id,
-            booking.Status);
     }
 
     /// <summary>
-    /// Отклоняет бронирование и сохраняет состояние. Безопасен для вызова, может бросить только OperationCanceledException при отмене через CancellationToken.
+    /// Отклоняет бронирование и сохраняет его состояние.
     /// </summary>
     public async Task<bool> TryRejectAsync(Booking booking, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
         try
         {
             ArgumentNullException.ThrowIfNull(booking);
-            logger.LogWarning("Отклонение брони {BookingId}", booking.Id);
+            _logger.LogWarning("Отклонение брони {BookingId}", booking.Id);
 
-            await _processingSemaphore.WaitAsync(cancellationToken);
+            await ProcessingSemaphore.WaitAsync(cancellationToken);
             try
             {
-                RejectAndReleaseSeats(booking, eventRepository.GetById(booking.EventId));
+                await using var scope = _scopeFactory.CreateAsyncScope();
+                var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var trackedBooking = await context.Bookings
+                    .FirstOrDefaultAsync(item => item.Id == booking.Id, cancellationToken);
+
+                if (trackedBooking is null || trackedBooking.Status is BookingStatus.Rejected or BookingStatus.Confirmed)
+                {
+                    return true;
+                }
+
+                var eventEntity = await context.Events
+                    .FirstOrDefaultAsync(item => item.Id == trackedBooking.EventId, cancellationToken);
+
+                if (eventEntity is not null)
+                {
+                    eventEntity.ReleaseSeats();
+                }
+
+                trackedBooking.Reject(DateTimeOffset.UtcNow);
+                await context.SaveChangesAsync(cancellationToken);
             }
             finally
             {
-                _processingSemaphore.Release();
+                ProcessingSemaphore.Release();
             }
 
-            logger.LogWarning(
+            _logger.LogWarning(
                 "Бронь {BookingId} переведена в статус {Status}",
                 booking.Id,
                 booking.Status);
@@ -105,30 +133,8 @@ public sealed class BookingProcessor(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Не удалось отклонить бронь {BookingId}", booking.Id);
+            _logger.LogError(ex, "Не удалось отклонить бронь {BookingId}", booking.Id);
             return false;
         }
-    }
-
-    private void RejectAndReleaseSeats(Booking booking, Event? eventEntity)
-    {
-        if (booking.Status == BookingStatus.Rejected)
-        {
-            return;
-        }
-
-        if (booking.Status == BookingStatus.Confirmed)
-        {
-            return;
-        }
-
-        if (eventEntity is not null)
-        {
-            eventEntity.ReleaseSeats();
-            eventRepository.Update(eventEntity);
-        }
-
-        booking.Reject(DateTimeOffset.UtcNow);
-        bookingRepository.Update(booking);
     }
 }

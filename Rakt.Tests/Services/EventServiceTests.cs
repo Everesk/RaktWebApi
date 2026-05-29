@@ -1,18 +1,28 @@
 using System.ComponentModel.DataAnnotations;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using RaktWebApi.Common.Exceptions;
-using RaktWebApi.Data.Repositories;
 using RaktWebApi.Models;
 using RaktWebApi.Models.DTO;
 using RaktWebApi.Services;
+using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;
 
 /// <summary>
 /// Набор тестов для сервиса <see cref="EventService"/>.
 /// </summary>
-public class EventServiceTests
+public class EventServiceTests : InMemoryDbTestBase
 {
+    /// <summary>
+    /// Настраивает сервисы, необходимые для тестов <see cref="EventService"/>.
+    /// </summary>
+    /// <param name="services">Коллекция сервисов DI.</param>
+    protected override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IEventService, EventService>();
+    }
+
     /// <summary>
     /// Проверяет, что событие успешно создается.
     /// </summary>
@@ -195,11 +205,10 @@ public class EventServiceTests
     /// Проверяет, что обновление проходит через репозиторий, а не зависит от общей ссылки на объект.
     /// </summary>
     [Fact]
-    public async Task Update_ShouldPersistChangesViaRepositoryUpdate()
+    public async Task Update_ShouldPersistChangesAcrossScopes()
     {
         // Arrange
-        var repository = new DetachedEventRepository();
-        var service = new EventService(repository);
+        var service = CreateService();
         var created = await service.CreateAsync(new CreateEventDto
         {
             Title = "Исходный заголовок",
@@ -219,10 +228,11 @@ public class EventServiceTests
 
         // Act
         await service.UpdateAsync(created.Id, dto);
-        var updated = await service.GetByIdAsync(created.Id);
+        using var verificationScope = CreateScope();
+        var verificationService = verificationScope.ServiceProvider.GetRequiredService<IEventService>();
+        var updated = await verificationService.GetByIdAsync(created.Id);
 
         // Assert
-        repository.UpdateCalls.Should().Be(1);
         updated.Title.Should().Be(dto.Title);
         updated.Description.Should().Be(dto.Description);
         updated.StartAt.Should().Be(dto.StartAt);
@@ -558,18 +568,9 @@ public class EventServiceTests
     /// <summary>
     /// Создает экземпляр сервиса для тестов.
     /// </summary>
-    private static EventService CreateService()
+    private IEventService CreateService()
     {
-        var repository = new InMemoryEventRepository();
-        return new EventService(repository);
-    }
-
-    /// <summary>
-    /// Создает UTC DateTimeOffset для тестовых данных.
-    /// </summary>
-    private static DateTimeOffset Utc(int year, int month, int day, int hour, int minute, int second)
-    {
-        return new DateTimeOffset(year, month, day, hour, minute, second, TimeSpan.Zero);
+        return GetRequiredService<IEventService>();
     }
 
     /// <summary>
@@ -585,53 +586,4 @@ public class EventServiceTests
         return results;
     }
 
-    private sealed class DetachedEventRepository : IEventRepository
-    {
-        private Event? stored;
-
-        public int UpdateCalls { get; private set; }
-
-        public IEnumerable<Event> GetAll()
-        {
-            return stored is null ? [] : [Clone(stored)];
-        }
-
-        public Event? GetById(Guid id)
-        {
-            return stored is not null && stored.Id == id ? Clone(stored) : null;
-        }
-
-        public void Add(Event entity)
-        {
-            stored = Clone(entity);
-        }
-
-        public void Update(Event entity)
-        {
-            UpdateCalls++;
-            stored = Clone(entity);
-        }
-
-        public void Delete(Event entity)
-        {
-            if (stored is not null && stored.Id == entity.Id)
-            {
-                stored = null;
-            }
-        }
-
-        private static Event Clone(Event source)
-        {
-            var clone = new Event(source.Title, source.Description, source.StartAt, source.EndAt, source.TotalSeats);
-            if (source.AvailableSeats < source.TotalSeats)
-            {
-                clone.TryReserveSeats(source.TotalSeats - source.AvailableSeats);
-            }
-            typeof(Event)
-                .GetProperty(nameof(Event.Id), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)!
-                .GetSetMethod(nonPublic: true)!
-                .Invoke(clone, new object[] { source.Id });
-            return clone;
-        }
-    }
 }

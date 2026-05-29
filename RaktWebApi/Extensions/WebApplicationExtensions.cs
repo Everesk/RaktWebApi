@@ -1,5 +1,7 @@
-﻿using RaktWebApi.Common.Helpers;
+using Microsoft.Extensions.DependencyInjection;
+using RaktWebApi.Common.Helpers;
 using RaktWebApi.Common.Middleware;
+using RaktWebApi.Data;
 using Serilog;
 
 namespace RaktWebApi.Extensions;
@@ -9,12 +11,13 @@ namespace RaktWebApi.Extensions;
 /// </summary>
 public static class WebApplicationExtensions
 {
-
     /// <summary>
     /// Стандартные настройки приложения
     /// </summary>
     public static WebApplication UseStandardConfiguration(this WebApplication app)
     {
+        app.EnsureDatabaseCreated();
+
         // Serilog-логирование HTTP-запросов.
         app.UseSerilogRequestLogging();
         app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -42,5 +45,16 @@ public static class WebApplicationExtensions
         app.MapControllers();
 
         return app;
+    }
+
+    /// <summary>
+    /// Создает базу данных и таблицы при первом запуске приложения.
+    /// </summary>
+    /// <param name="app">Экземпляр веб-приложения.</param>
+    private static void EnsureDatabaseCreated(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.EnsureCreated();
     }
 }

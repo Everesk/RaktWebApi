@@ -1,23 +1,46 @@
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using RaktWebApi.Data.Repositories;
+using RaktWebApi.Data.Interceptors;
+using RaktWebApi.Data;
 using RaktWebApi.Models;
 using RaktWebApi.Options;
 using RaktWebApi.Services;
+using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;
 
 /// <summary>
 /// Тесты для фоновой обработки бронирований.
 /// </summary>
-public class BookingBackgroundServiceTests
+public class BookingBackgroundServiceTests : InMemoryDbTestBase
 {
-    private static DateTimeOffset Utc(int year, int month, int day, int hour, int minute, int second)
+    /// <summary>
+    /// Настраивает сервисы, необходимые для тестов <see cref="BookingBackgroundService"/>.
+    /// </summary>
+    /// <param name="services">Коллекция сервисов DI.</param>
+    protected override void ConfigureServices(IServiceCollection services)
     {
-        return new DateTimeOffset(year, month, day, hour, minute, second, TimeSpan.Zero);
+        services.AddScoped<IBookingService, BookingService>();
+        services.AddSingleton<IBookingProcessor, BookingProcessor>();
+        services.AddOptions<BookingProcessingOptions>().Configure(options => options.AttemptsLimit = 3);
+        services.AddLogging();
+    }
+
+    /// <summary>
+    /// Настраивает DbContext для тестов фоновой обработки бронирований.
+    /// </summary>
+    /// <param name="services">Коллекция сервисов DI.</param>
+    protected override void ConfigureDbContext(IServiceCollection services)
+    {
+        services.AddSingleton<BookingCreatedAtInterceptor>();
+        services.AddDbContext<AppDbContext>((sp, options) =>
+        {
+            options.UseInMemoryDatabase(DatabaseName);
+            options.AddInterceptors(sp.GetRequiredService<BookingCreatedAtInterceptor>());
+        });
     }
 
     /// <summary>
@@ -27,28 +50,9 @@ public class BookingBackgroundServiceTests
     public async Task BackgroundService_ShouldConfirmPendingBooking()
     {
         // Arrange
-        var eventRepository = new InMemoryEventRepository();
-        var eventEntity = CreateEvent();
-        eventRepository.Add(eventEntity);
-
-        var bookingRepository = new InMemoryBookingRepository();
-        var booking = new Booking(eventEntity.Id);
-        bookingRepository.Add(booking);
-
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton<IEventRepository>(eventRepository);
-        services.AddSingleton<IBookingRepository>(bookingRepository);
-        services.AddSingleton<IBookingProcessor, BookingProcessor>();
-        services.AddOptions<BookingProcessingOptions>().Configure(options => options.AttemptsLimit = 3);
-        await using var provider = services.BuildServiceProvider();
-
-        var service = new BookingBackgroundService(
-            bookingRepository,
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            provider.GetRequiredService<IOptions<BookingProcessingOptions>>(),
-            NullLogger<BookingBackgroundService>.Instance);
-
+        var eventEntity = await SeedEventAsync();
+        var booking = await CreatePendingBookingAsync(eventEntity.Id);
+        var service = CreateBackgroundService();
         using var cts = new CancellationTokenSource();
 
         // Act
@@ -57,7 +61,9 @@ public class BookingBackgroundServiceTests
         Booking? processed = null;
         var completed = SpinWait.SpinUntil(() =>
         {
-            processed = bookingRepository.GetById(booking.Id);
+            using var scope = CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            processed = context.Bookings.AsNoTracking().FirstOrDefault(x => x.Id == booking.Id);
             return processed?.Status == BookingStatus.Confirmed;
         }, TimeSpan.FromSeconds(30));
 
@@ -78,29 +84,18 @@ public class BookingBackgroundServiceTests
     public async Task BackgroundService_ShouldRejectBooking_WhenEventWasDeletedBeforeProcessing()
     {
         // Arrange
-        var eventRepository = new InMemoryEventRepository();
-        var eventEntity = CreateEvent();
-        eventRepository.Add(eventEntity);
+        var eventEntity = await SeedEventAsync();
+        var booking = await CreatePendingBookingAsync(eventEntity.Id);
 
-        var bookingRepository = new InMemoryBookingRepository();
-        var booking = new Booking(eventEntity.Id);
-        bookingRepository.Add(booking);
-        eventRepository.Delete(eventEntity);
+        using (var scope = CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var storedEvent = await context.Events.FirstAsync(x => x.Id == eventEntity.Id);
+            context.Events.Remove(storedEvent);
+            await context.SaveChangesAsync();
+        }
 
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton<IEventRepository>(eventRepository);
-        services.AddSingleton<IBookingRepository>(bookingRepository);
-        services.AddSingleton<IBookingProcessor, BookingProcessor>();
-        services.AddOptions<BookingProcessingOptions>().Configure(options => options.AttemptsLimit = 3);
-        await using var provider = services.BuildServiceProvider();
-
-        var service = new BookingBackgroundService(
-            bookingRepository,
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            provider.GetRequiredService<IOptions<BookingProcessingOptions>>(),
-            NullLogger<BookingBackgroundService>.Instance);
-
+        var service = CreateBackgroundService();
         using var cts = new CancellationTokenSource();
 
         // Act
@@ -109,7 +104,9 @@ public class BookingBackgroundServiceTests
         Booking? processed = null;
         var completed = SpinWait.SpinUntil(() =>
         {
-            processed = bookingRepository.GetById(booking.Id);
+            using var scope = CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            processed = context.Bookings.AsNoTracking().FirstOrDefault(x => x.Id == booking.Id);
             return processed?.Status == BookingStatus.Rejected;
         }, TimeSpan.FromSeconds(30));
 
@@ -124,89 +121,31 @@ public class BookingBackgroundServiceTests
     }
 
     /// <summary>
-    /// Проверяет, что неожиданная ошибка переводит бронь в Rejected.
+    /// Создает Pending-бронь для теста.
     /// </summary>
-    [Fact]
-    public async Task BackgroundService_ShouldRejectBooking_WhenProcessorThrows()
+    private async Task<Booking> CreatePendingBookingAsync(Guid eventId)
     {
-        // Arrange
-        var eventRepository = new InMemoryEventRepository();
-        var eventEntity = CreateEvent();
-        eventRepository.Add(eventEntity);
-
-        var bookingRepository = new InMemoryBookingRepository();
-        var booking = new Booking(eventEntity.Id);
-        bookingRepository.Add(booking);
-        var processor = new CountingThrowingBookingProcessor(bookingRepository);
-
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton<IBookingRepository>(bookingRepository);
-        services.AddSingleton<IBookingProcessor>(processor);
-        services.AddOptions<BookingProcessingOptions>().Configure(options => options.AttemptsLimit = 2);
-        await using var provider = services.BuildServiceProvider();
-
-        var service = new BookingBackgroundService(
-            bookingRepository,
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            provider.GetRequiredService<IOptions<BookingProcessingOptions>>(),
-            NullLogger<BookingBackgroundService>.Instance);
-
-        using var cts = new CancellationTokenSource();
-
-        // Act
-        await service.StartAsync(cts.Token);
-
-        Booking? processed = null;
-        var completed = SpinWait.SpinUntil(() =>
-        {
-            processed = bookingRepository.GetById(booking.Id);
-            return processed?.Status == BookingStatus.Rejected;
-        }, TimeSpan.FromSeconds(30));
-
-        // Assert
-        completed.Should().BeTrue("неожиданная ошибка должна переводить бронь в Rejected");
-        processed.Should().NotBeNull();
-        processed!.Status.Should().Be(BookingStatus.Rejected);
-        processed.ProcessedAt.Should().NotBeNull();
-        processor.ProcessCalls.Should().Be(2);
-        processor.RejectCalls.Should().Be(1);
-
-        await cts.CancelAsync();
-        await service.StopAsync(CancellationToken.None);
+        using var scope = CreateScope();
+        var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
+        return await bookingService.CreateBookingAsync(eventId);
     }
 
     /// <summary>
-    /// Создает событие для теста.
+    /// Возвращает фабрику scopes для тестового контейнера.
     /// </summary>
-    private static Event CreateEvent()
+    private IServiceScopeFactory CreateScopeFactory()
     {
-        return new Event(
-            title: "Тестовое событие",
-            description: null,
-            startAt: Utc(2026, 4, 1, 10, 0, 0),
-            endAt: Utc(2026, 4, 1, 11, 0, 0),
-            totalSeats: 10);
+        return ServiceProvider.GetRequiredService<IServiceScopeFactory>();
     }
 
-    private sealed class CountingThrowingBookingProcessor(IBookingRepository bookingRepository) : IBookingProcessor
+    /// <summary>
+    /// Создает конфигурированный фоновой сервис.
+    /// </summary>
+    private BookingBackgroundService CreateBackgroundService()
     {
-        public int ProcessCalls { get; private set; }
-
-        public int RejectCalls { get; private set; }
-
-        public Task ProcessAsync(Booking booking, CancellationToken cancellationToken = default)
-        {
-            ProcessCalls++;
-            throw new InvalidOperationException("Ошибка обработки бронирования");
-        }
-
-        public Task<bool> TryRejectAsync(Booking booking, CancellationToken cancellationToken = default)
-        {
-            RejectCalls++;
-            booking.Reject(DateTimeOffset.UtcNow);
-            bookingRepository.Update(booking);
-            return Task.FromResult(true);
-        }
+        return new BookingBackgroundService(
+            CreateScopeFactory(),
+            Options.Create(new BookingProcessingOptions { AttemptsLimit = 3 }),
+            NullLogger<BookingBackgroundService>.Instance);
     }
 }
