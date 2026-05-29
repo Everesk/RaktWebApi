@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using RaktWebApi.Data;
 using RaktWebApi.Data.Repositories;
 using RaktWebApi.Options;
 using RaktWebApi.Services;
@@ -50,6 +52,9 @@ public static class WebApplicationBuilderExtensions
             .Bind(builder.Configuration.GetSection(BookingProcessingOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
+
+        builder.Services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
         builder.Services.AddSingleton<IEventRepository, InMemoryEventRepository>();
         builder.Services.AddSingleton<IBookingRepository, InMemoryBookingRepository>();

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using RaktWebApi.Common.Exceptions;
 using RaktWebApi.Data;
 using RaktWebApi.Data.Repositories;
@@ -20,6 +21,7 @@ public class EventService : IEventService
     /// Создает сервис событий для работы через EF Core.
     /// </summary>
     /// <param name="context">Контекст базы данных приложения.</param>
+    [ActivatorUtilitiesConstructor]
     public EventService(AppDbContext context)
     {
         _context = context;

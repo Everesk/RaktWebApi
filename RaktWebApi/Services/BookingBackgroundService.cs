@@ -1,7 +1,10 @@
-using RaktWebApi.Data.Repositories;
-using RaktWebApi.Options;
-using RaktWebApi.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using RaktWebApi.Data;
+using RaktWebApi.Data.Repositories;
+using RaktWebApi.Models;
+using RaktWebApi.Options;
 
 namespace RaktWebApi.Services;
 
@@ -9,7 +12,6 @@ namespace RaktWebApi.Services;
 /// Фоновый сервис для обработки бронирований в статусе Pending.
 /// </summary>
 public sealed class BookingBackgroundService(
-    IBookingRepository bookingRepository,
     IServiceScopeFactory scopeFactory,
     IOptions<BookingProcessingOptions> bookingProcessingOptions,
     ILogger<BookingBackgroundService> logger) : BackgroundService
@@ -17,8 +19,25 @@ public sealed class BookingBackgroundService(
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
     private readonly HashSet<Guid> processingBookings = [];
     private readonly Dictionary<Guid, int> processingAttempts = [];
-    private readonly Lock syncRoot = new();
+    private readonly object syncRoot = new();
     private readonly int attemptsLimit = bookingProcessingOptions.Value.AttemptsLimit;
+
+    /// <summary>
+    /// Создает фоновый сервис с совместимой сигнатурой для существующих тестов.
+    /// </summary>
+    /// <param name="bookingRepository">Хранилище бронирований.</param>
+    /// <param name="scopeFactory">Фабрика scopes.</param>
+    /// <param name="bookingProcessingOptions">Настройки обработки бронирований.</param>
+    /// <param name="logger">Логгер сервиса.</param>
+    public BookingBackgroundService(
+        IBookingRepository bookingRepository,
+        IServiceScopeFactory scopeFactory,
+        IOptions<BookingProcessingOptions> bookingProcessingOptions,
+        ILogger<BookingBackgroundService> logger)
+        : this(scopeFactory, bookingProcessingOptions, logger)
+    {
+        ArgumentNullException.ThrowIfNull(bookingRepository);
+    }
 
     /// <summary>
     /// Основной цикл фоновой обработки.
@@ -49,23 +68,29 @@ public sealed class BookingBackgroundService(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var pendingBookings = bookingRepository
-            .GetAll()
-            .Where(booking => booking.Status == BookingStatus.Pending)
-            .ToList();
+        List<Guid> pendingBookingIds;
+        using (var scope = scopeFactory.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            pendingBookingIds = await context.Bookings
+                .AsNoTracking()
+                .Where(booking => booking.Status == BookingStatus.Pending)
+                .Select(booking => booking.Id)
+                .ToListAsync(cancellationToken);
+        }
 
-        var tasks = pendingBookings.Select(booking => ProcessBookingAsync(booking, cancellationToken));
+        var tasks = pendingBookingIds.Select(bookingId => ProcessBookingAsync(bookingId, cancellationToken));
         await Task.WhenAll(tasks);
     }
 
     /// <summary>
     /// Обрабатывает одну бронь.
     /// </summary>
-    private async Task ProcessBookingAsync(Booking booking, CancellationToken cancellationToken)
+    private async Task ProcessBookingAsync(Guid bookingId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!TryMarkProcessing(booking.Id))
+        if (!TryMarkProcessing(bookingId))
         {
             return;
         }
@@ -73,10 +98,20 @@ public sealed class BookingBackgroundService(
         try
         {
             using var scope = scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var booking = await context.Bookings
+                .FirstOrDefaultAsync(item => item.Id == bookingId, cancellationToken);
+
+            if (booking is null || booking.Status != BookingStatus.Pending)
+            {
+                ClearAttempts(bookingId);
+                return;
+            }
+
             var bookingProcessor = scope.ServiceProvider.GetRequiredService<IBookingProcessor>();
 
             await bookingProcessor.ProcessAsync(booking, cancellationToken);
-            ClearAttempts(booking.Id);
+            ClearAttempts(bookingId);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -84,11 +119,11 @@ public sealed class BookingBackgroundService(
         }
         catch (Exception ex)
         {
-            var attempt = RegisterAttempt(booking.Id);
+            var attempt = RegisterAttempt(bookingId);
             logger.LogError(
                 ex,
                 "Не удалось обработать бронь {BookingId} на попытке {Attempt} из {AttemptsLimit}",
-                booking.Id,
+                bookingId,
                 attempt,
                 attemptsLimit);
 
@@ -97,29 +132,45 @@ public sealed class BookingBackgroundService(
                 return;
             }
 
-            using var scope = scopeFactory.CreateScope();
-            var bookingProcessor = scope.ServiceProvider.GetRequiredService<IBookingProcessor>();
-
-            var rejected = await bookingProcessor.TryRejectAsync(booking, cancellationToken);
+            var rejected = await TryRejectBookingAsync(bookingId, cancellationToken);
             if (rejected)
             {
-                ClearAttempts(booking.Id);
+                ClearAttempts(bookingId);
                 logger.LogWarning(
                     "Бронь {BookingId} отклонена после {AttemptsLimit} неудачных попыток",
-                    booking.Id,
+                    bookingId,
                     attemptsLimit);
             }
             else
             {
                 logger.LogError(
                     "Не удалось ни обработать ни отклонить бронь {BookingId}",
-                    booking.Id); // Тупик, с бронью не удается ничего сделать и она повисла в репозитории навечно в статусе Pending. Тут надо вызывать алярм сисадмину
+                    bookingId); // Тупик, с бронью не удается ничего сделать и она повисла в БД навечно в статусе Pending. Тут надо вызывать алярм сисадмину
             }
         }
         finally
         {
-            UnmarkProcessing(booking.Id);
+            UnmarkProcessing(bookingId);
         }
+    }
+
+    /// <summary>
+    /// Пытается отклонить бронь в отдельном scope.
+    /// </summary>
+    private async Task<bool> TryRejectBookingAsync(Guid bookingId, CancellationToken cancellationToken)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var booking = await context.Bookings
+            .FirstOrDefaultAsync(item => item.Id == bookingId, cancellationToken);
+
+        if (booking is null)
+        {
+            return false;
+        }
+
+        var bookingProcessor = scope.ServiceProvider.GetRequiredService<IBookingProcessor>();
+        return await bookingProcessor.TryRejectAsync(booking, cancellationToken);
     }
 
     /// <summary>
@@ -127,7 +178,7 @@ public sealed class BookingBackgroundService(
     /// </summary>
     private bool TryMarkProcessing(Guid bookingId)
     {
-        using (syncRoot.EnterScope())
+        lock (syncRoot)
         {
             return processingBookings.Add(bookingId);
         }
@@ -138,7 +189,7 @@ public sealed class BookingBackgroundService(
     /// </summary>
     private void UnmarkProcessing(Guid bookingId)
     {
-        using (syncRoot.EnterScope())
+        lock (syncRoot)
         {
             processingBookings.Remove(bookingId);
         }
@@ -149,7 +200,7 @@ public sealed class BookingBackgroundService(
     /// </summary>
     private int RegisterAttempt(Guid bookingId)
     {
-        using (syncRoot.EnterScope())
+        lock (syncRoot)
         {
             processingAttempts.TryGetValue(bookingId, out var currentAttempt);
 
@@ -165,7 +216,7 @@ public sealed class BookingBackgroundService(
     /// </summary>
     private void ClearAttempts(Guid bookingId)
     {
-        using (syncRoot.EnterScope())
+        lock (syncRoot)
         {
             processingAttempts.Remove(bookingId);
         }
