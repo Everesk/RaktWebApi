@@ -32,7 +32,7 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
 - автоматически переводить брони из `Pending` в `Confirmed` в фоне
 - отклонять брони, если событие удалено до фоновой обработки
 
-На текущем этапе данные хранятся в памяти приложения, без использования базы данных.
+Приложение работает с PostgreSQL, а в тестах используется InMemory-провайдер EF Core.
 
 ## Стек
 
@@ -57,7 +57,7 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
   - Exceptions - пользовательские исключения
   - Middleware - глобальная обработка ошибок и статус-кодов
   - Helpers - формирование ProblemDetails
-- `Data/Repositories` - in-memory хранилища
+- `Data` - EF Core контекст, конфигурации и интерсепторы
 
 ### Тестовый проект Rakt.Tests
 
@@ -67,6 +67,7 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
 ## Требования
 
 - .NET SDK 9.0
+- PostgreSQL 14+ или совместимая версия
 
 ## Запуск проекта
 
@@ -74,6 +75,36 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
 ```
 git clone <ссылка-на-репозиторий>
 ```
+
+Настроить строку подключения в `RaktWebApi/appsettings.json`:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5433;Database=eventapi;Username=postgres;Password=postgres"
+  }
+}
+```
+
+Если вы запускаете PostgreSQL локально, проверьте, что порт совпадает со строкой подключения. В этом проекте по умолчанию используется `5433`, чтобы не конфликтовать с возможной локальной установкой PostgreSQL на `5432`.
+
+### PostgreSQL через Docker Compose
+
+Для быстрого запуска PostgreSQL можно использовать `docker-compose.yml` из корня репозитория:
+
+```bash
+docker compose up -d
+```
+
+Контейнер поднимается с пробросом `5433:5432`, поэтому приложение подключается к `localhost:5433`.
+
+Остановка контейнера:
+
+```bash
+docker compose down
+```
+
+Данные PostgreSQL сохраняются в именованном томе `eventapi_pgdata`.
+
 Перейти в папку проекта:
 ```
 cd RaktWebApi/RaktWebApi
@@ -91,6 +122,8 @@ dotnet run --launch-profile https
 
 - http://localhost:5007
 - https://localhost:7130
+
+При запуске приложение автоматически создаёт схему базы данных через `EnsureCreated()`, если базы данных или таблиц ещё нет.
 
 ## Swagger
 
@@ -379,3 +412,5 @@ application/json
 ```bash
 dotnet test
 ```
+
+Тестовый проект использует `Microsoft.EntityFrameworkCore.InMemory`, поэтому PostgreSQL для тестов не требуется.
