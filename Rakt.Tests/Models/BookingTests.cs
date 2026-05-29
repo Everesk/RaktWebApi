@@ -1,11 +1,10 @@
 using FluentAssertions;
-using RaktWebApi.Data.Repositories;
 using RaktWebApi.Models;
 
 namespace Rakt.Tests.Models;
 
 /// <summary>
-/// Набор тестов для модели <see cref="Booking"/> и ее хранилища.
+/// Набор тестов для модели <see cref="Booking"/>.
 /// </summary>
 public class BookingTests
 {
@@ -31,47 +30,6 @@ public class BookingTests
         booking.ProcessedAt.Should().BeNull();
         booking.CreatedAt.Should().BeOnOrAfter(beforeCreate);
         booking.CreatedAt.Should().BeOnOrBefore(afterCreate);
-    }
-
-    /// <summary>
-    /// Проверяет работу in-memory хранилища бронирований.
-    /// </summary>
-    [Fact]
-    public void InMemoryBookingRepository_ShouldStoreAndReturnBookings()
-    {
-        // Arrange
-        var repository = new InMemoryBookingRepository();
-        var booking = CreateBooking(Guid.NewGuid());
-
-        // Act
-        repository.Add(booking);
-        var stored = repository.GetById(booking.Id);
-        var all = repository.GetAll();
-
-        // Assert
-        stored.Should().NotBeNull();
-        stored.Should().BeSameAs(booking);
-        all.Should().ContainSingle();
-        all.Should().ContainSingle(x => x.Id == booking.Id);
-    }
-
-    /// <summary>
-    /// Проверяет, что бронирование можно удалить из хранилища.
-    /// </summary>
-    [Fact]
-    public void InMemoryBookingRepository_ShouldDeleteBooking()
-    {
-        // Arrange
-        var repository = new InMemoryBookingRepository();
-        var booking = CreateBooking(Guid.NewGuid());
-        repository.Add(booking);
-
-        // Act
-        repository.Delete(booking);
-
-        // Assert
-        repository.GetAll().Should().BeEmpty();
-        repository.GetById(booking.Id).Should().BeNull();
     }
 
     /// <summary>

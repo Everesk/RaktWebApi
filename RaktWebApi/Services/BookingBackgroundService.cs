@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RaktWebApi.Data;
-using RaktWebApi.Data.Repositories;
 using RaktWebApi.Models;
 using RaktWebApi.Options;
 
@@ -21,23 +20,6 @@ public sealed class BookingBackgroundService(
     private readonly Dictionary<Guid, int> processingAttempts = [];
     private readonly object syncRoot = new();
     private readonly int attemptsLimit = bookingProcessingOptions.Value.AttemptsLimit;
-
-    /// <summary>
-    /// Создает фоновый сервис с совместимой сигнатурой для существующих тестов.
-    /// </summary>
-    /// <param name="bookingRepository">Хранилище бронирований.</param>
-    /// <param name="scopeFactory">Фабрика scopes.</param>
-    /// <param name="bookingProcessingOptions">Настройки обработки бронирований.</param>
-    /// <param name="logger">Логгер сервиса.</param>
-    public BookingBackgroundService(
-        IBookingRepository bookingRepository,
-        IServiceScopeFactory scopeFactory,
-        IOptions<BookingProcessingOptions> bookingProcessingOptions,
-        ILogger<BookingBackgroundService> logger)
-        : this(scopeFactory, bookingProcessingOptions, logger)
-    {
-        ArgumentNullException.ThrowIfNull(bookingRepository);
-    }
 
     /// <summary>
     /// Основной цикл фоновой обработки.
@@ -109,7 +91,6 @@ public sealed class BookingBackgroundService(
             }
 
             var bookingProcessor = scope.ServiceProvider.GetRequiredService<IBookingProcessor>();
-
             await bookingProcessor.ProcessAsync(booking, cancellationToken);
             ClearAttempts(bookingId);
         }
@@ -145,7 +126,7 @@ public sealed class BookingBackgroundService(
             {
                 logger.LogError(
                     "Не удалось ни обработать ни отклонить бронь {BookingId}",
-                    bookingId); // Тупик, с бронью не удается ничего сделать и она повисла в БД навечно в статусе Pending. Тут надо вызывать алярм сисадмину
+                    bookingId);
             }
         }
         finally

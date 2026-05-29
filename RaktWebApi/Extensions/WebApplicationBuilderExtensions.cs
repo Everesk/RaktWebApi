@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using RaktWebApi.Data;
-using RaktWebApi.Data.Repositories;
 using RaktWebApi.Options;
 using RaktWebApi.Services;
 using Serilog;
@@ -56,8 +55,6 @@ public static class WebApplicationBuilderExtensions
         builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-        builder.Services.AddSingleton<IEventRepository, InMemoryEventRepository>();
-        builder.Services.AddSingleton<IBookingRepository, InMemoryBookingRepository>();
         builder.Services.AddScoped<IEventService, EventService>();
         builder.Services.AddScoped<IBookingService, BookingService>();
         builder.Services.AddSingleton<IBookingProcessor, BookingProcessor>();

@@ -1,5 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using RaktWebApi.Common.Exceptions;
-using RaktWebApi.Data.Repositories;
+using RaktWebApi.Data;
 using RaktWebApi.Models;
 
 namespace RaktWebApi.Services;
@@ -7,22 +8,31 @@ namespace RaktWebApi.Services;
 /// <summary>
 /// Сервис для управления бронированиями.
 /// </summary>
-public class BookingService(
-    IBookingRepository bookingRepository,
-    IEventRepository eventRepository) : IBookingService
+public sealed class BookingService : IBookingService
 {
-    private readonly static object BookingLock = new();
+    private static readonly SemaphoreSlim BookingSemaphore = new(1, 1);
+    private readonly AppDbContext _context;
+
+    /// <summary>
+    /// Создает сервис бронирований.
+    /// </summary>
+    /// <param name="context">Контекст базы данных приложения.</param>
+    public BookingService(AppDbContext context)
+    {
+        _context = context;
+    }
 
     /// <summary>
     /// Создает бронирование для указанного события.
     /// </summary>
-    public Task<Booking> CreateBookingAsync(Guid eventId, CancellationToken cancellationToken = default)
+    public async Task<Booking> CreateBookingAsync(Guid eventId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        lock (BookingLock)
+        await BookingSemaphore.WaitAsync(cancellationToken);
+        try
         {
-            var eventEntity = eventRepository.GetById(eventId);
+            var eventEntity = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId, cancellationToken);
             if (eventEntity is null)
             {
                 throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
@@ -33,45 +43,50 @@ public class BookingService(
                 throw new NoAvailableSeatsException("Мест нет, уйдите");
             }
 
-            eventRepository.Update(eventEntity);
-
             var booking = new Booking(eventId);
-            bookingRepository.Add(booking);
+            await _context.Bookings.AddAsync(booking, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
 
-            return Task.FromResult(booking);
+            return booking;
+        }
+        finally
+        {
+            BookingSemaphore.Release();
         }
     }
 
     /// <summary>
     /// Возвращает бронирование по идентификатору.
     /// </summary>
-    public Task<Booking> GetBookingByIdAsync(Guid bookingId, CancellationToken cancellationToken = default)
+    public async Task<Booking> GetBookingByIdAsync(Guid bookingId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var booking = bookingRepository.GetById(bookingId);
+        var booking = await _context.Bookings.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == bookingId, cancellationToken);
 
-        return Task.FromResult(
-            booking ?? throw new NotFoundException($"Бронь с идентификатором '{bookingId}' не найдена."));
+        return booking ?? throw new NotFoundException($"Бронь с идентификатором '{bookingId}' не найдена.");
     }
 
     /// <summary>
     /// Возвращает все бронирования для указанного события.
     /// </summary>
-    public Task<IReadOnlyCollection<Booking>> GetBookingsByEventIdAsync(Guid eventId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<Booking>> GetBookingsByEventIdAsync(Guid eventId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (eventRepository.GetById(eventId) is null)
+        var eventExists = await _context.Events.AsNoTracking()
+            .AnyAsync(x => x.Id == eventId, cancellationToken);
+
+        if (!eventExists)
         {
             throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
         }
 
-        var bookings = bookingRepository
-            .GetAll()
+        var bookings = await _context.Bookings.AsNoTracking()
             .Where(booking => booking.EventId == eventId)
-            .ToList();
+            .ToListAsync(cancellationToken);
 
-        return Task.FromResult<IReadOnlyCollection<Booking>>(bookings);
+        return bookings;
     }
 }
