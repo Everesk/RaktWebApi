@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RaktWebApi.Data;
+using RaktWebApi.Data.Interceptors;
 using RaktWebApi.Options;
 using RaktWebApi.Services;
 using Serilog;
@@ -52,13 +53,28 @@ public static class WebApplicationBuilderExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        builder.Services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+        builder.AddEF();
 
         builder.Services.AddScoped<IEventService, EventService>();
         builder.Services.AddScoped<IBookingService, BookingService>();
         builder.Services.AddSingleton<IBookingProcessor, BookingProcessor>();
         builder.Services.AddHostedService<BookingBackgroundService>();
+        return builder;
+    }
+
+    /// <summary>
+    /// Регистрирует EF Core интерсепторы приложения.
+    /// </summary>
+    /// <param name="builder">Построитель приложения.</param>
+    private static WebApplicationBuilder AddEF(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<BookingCreatedAtInterceptor>();
+        builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+        {
+            options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+            options.AddInterceptors(sp.GetRequiredService<BookingCreatedAtInterceptor>());
+        });
+
         return builder;
     }
 

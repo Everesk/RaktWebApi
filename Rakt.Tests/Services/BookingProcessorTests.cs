@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using RaktWebApi.Data.Interceptors;
 using RaktWebApi.Data;
 using RaktWebApi.Models;
 using RaktWebApi.Services;
@@ -22,6 +23,20 @@ public class BookingProcessorTests : InMemoryDbTestBase
         services.AddScoped<IBookingService, BookingService>();
         services.AddSingleton<IBookingProcessor, BookingProcessor>();
         services.AddLogging();
+    }
+
+    /// <summary>
+    /// Настраивает DbContext для тестов обработчика бронирований.
+    /// </summary>
+    /// <param name="services">Коллекция сервисов DI.</param>
+    protected override void ConfigureDbContext(IServiceCollection services)
+    {
+        services.AddSingleton<BookingCreatedAtInterceptor>();
+        services.AddDbContext<AppDbContext>((sp, options) =>
+        {
+            options.UseInMemoryDatabase(DatabaseName);
+            options.AddInterceptors(sp.GetRequiredService<BookingCreatedAtInterceptor>());
+        });
     }
 
     /// <summary>

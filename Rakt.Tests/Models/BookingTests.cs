@@ -9,18 +9,15 @@ namespace Rakt.Tests.Models;
 public class BookingTests
 {
     /// <summary>
-    /// Проверяет, что бронирование при создании получает корректные значения по умолчанию.
+    /// Проверяет, что бронирование при создании получает корректные значения по умолчанию без установки даты создания (этим теперь EF перехватчик занимается).
     /// </summary>
-    [Fact]
-    public void Booking_ShouldInitializeWithPendingStatusAndCurrentCreationTime()
+    [Fact] public void Booking_ShouldInitializeWithPendingStatusAndNullCreationTime()
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var beforeCreate = DateTimeOffset.UtcNow;
 
         // Act
         var booking = CreateBooking(eventId);
-        var afterCreate = DateTimeOffset.UtcNow;
 
         // Assert
         booking.Should().NotBeNull();
@@ -28,8 +25,7 @@ public class BookingTests
         booking.EventId.Should().Be(eventId);
         booking.Status.Should().Be(BookingStatus.Pending);
         booking.ProcessedAt.Should().BeNull();
-        booking.CreatedAt.Should().BeOnOrAfter(beforeCreate);
-        booking.CreatedAt.Should().BeOnOrBefore(afterCreate);
+        booking.CreatedAt.Should().Be(default);
     }
 
     /// <summary>

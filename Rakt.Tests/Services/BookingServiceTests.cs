@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using RaktWebApi.Data.Interceptors;
 using RaktWebApi.Common.Exceptions;
 using RaktWebApi.Data;
 using RaktWebApi.Models;
@@ -24,6 +25,20 @@ public class BookingServiceTests : InMemoryDbTestBase
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IBookingService, BookingService>();
+    }
+
+    /// <summary>
+    /// Настраивает DbContext для тестов сервиса бронирований.
+    /// </summary>
+    /// <param name="services">Коллекция сервисов DI.</param>
+    protected override void ConfigureDbContext(IServiceCollection services)
+    {
+        services.AddSingleton<BookingCreatedAtInterceptor>();
+        services.AddDbContext<AppDbContext>((sp, options) =>
+        {
+            options.UseInMemoryDatabase(DatabaseName);
+            options.AddInterceptors(sp.GetRequiredService<BookingCreatedAtInterceptor>());
+        });
     }
 
     /// <summary>
@@ -52,6 +67,39 @@ public class BookingServiceTests : InMemoryDbTestBase
         var context = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var storedEvent = await context.Events.AsNoTracking().FirstAsync(x => x.Id == eventEntity.Id);
         storedEvent.AvailableSeats.Should().Be(9);
+    }
+
+    /// <summary>
+    /// Проверяет, что перехватчик EF Core заполняет дату создания при сохранении новой брони.
+    /// </summary>
+    [Fact]
+    public async Task SaveChangesAsync_ShouldSetCreatedAtForNewBooking()
+    {
+        // Arrange
+        var eventEntity = await SeedEventAsync();
+        var beforeSave = DateTimeOffset.UtcNow;
+
+        using var scope = CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var booking = new Booking(eventEntity.Id);
+
+        booking.CreatedAt.Should().Be(default);
+
+        // Act
+        await context.Bookings.AddAsync(booking);
+        await context.SaveChangesAsync();
+
+        var afterSave = DateTimeOffset.UtcNow;
+
+        // Assert
+        booking.CreatedAt.Should().NotBe(default);
+        booking.CreatedAt.Should().BeOnOrAfter(beforeSave);
+        booking.CreatedAt.Should().BeOnOrBefore(afterSave);
+
+        var storedBooking = await context.Bookings.AsNoTracking().FirstAsync(x => x.Id == booking.Id);
+        storedBooking.CreatedAt.Should().Be(booking.CreatedAt);
+        storedBooking.CreatedAt.Should().BeOnOrAfter(beforeSave);
+        storedBooking.CreatedAt.Should().BeOnOrBefore(afterSave);
     }
 
     /// <summary>

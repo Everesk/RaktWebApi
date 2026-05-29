@@ -26,6 +26,16 @@ public abstract class InMemoryDbTestBase : IDisposable
     protected abstract void ConfigureServices(IServiceCollection services);
 
     /// <summary>
+    /// Настраивает DbContext для текущего тестового контейнера.
+    /// </summary>
+    /// <param name="services">Коллекция сервисов DI.</param>
+    protected virtual void ConfigureDbContext(IServiceCollection services)
+    {
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseInMemoryDatabase(_dbName));
+    }
+
+    /// <summary>
     /// Возвращает настроенный root-контейнер для тестов.
     /// </summary>
     protected IServiceProvider ServiceProvider
@@ -130,9 +140,7 @@ public abstract class InMemoryDbTestBase : IDisposable
         }
 
         var services = new ServiceCollection();
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseInMemoryDatabase(_dbName));
-
+        ConfigureDbContext(services);
         ConfigureServices(services);
 
         _serviceProvider = services.BuildServiceProvider();

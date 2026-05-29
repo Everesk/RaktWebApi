@@ -42,7 +42,6 @@ public class Booking
     {
         EventId = eventId;
         Status = BookingStatus.Pending;
-        CreatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <summary>
