@@ -15,26 +15,30 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
     /// <param name="builder">Построитель конфигурации сущности.</param>
     public void Configure(EntityTypeBuilder<Booking> builder)
     {
-        builder.ToTable("Bookings");
+        builder.ToTable("bookings");
 
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasKey(x => x.Id).HasName("pk_bookings");
+        builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
 
         builder.Property(x => x.Status)
+            .HasColumnName("status")
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(32);
 
         builder.Property(x => x.EventId)
+            .HasColumnName("event_id")
             .IsRequired();
 
         builder.Property(x => x.CreatedAt)
+            .HasColumnName("created_at")
             .IsRequired();
 
-        builder.Property(x => x.ProcessedAt);
+        builder.Property(x => x.ProcessedAt).HasColumnName("processed_at");
 
         builder.HasOne(x => x.Event)
             .WithMany(x => x.Bookings)
-            .HasForeignKey(x => x.EventId);
+            .HasForeignKey(x => x.EventId)
+            .HasConstraintName("fk_bookings_events_event_id");
     }
 }

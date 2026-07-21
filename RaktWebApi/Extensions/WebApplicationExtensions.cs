@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RaktWebApi.Common.Helpers;
 using RaktWebApi.Common.Middleware;
@@ -16,7 +17,7 @@ public static class WebApplicationExtensions
     /// </summary>
     public static WebApplication UseStandardConfiguration(this WebApplication app)
     {
-        app.EnsureDatabaseCreated();
+        app.ApplyDatabaseMigrations();
 
         // Serilog-логирование HTTP-запросов.
         app.UseSerilogRequestLogging();
@@ -48,13 +49,14 @@ public static class WebApplicationExtensions
     }
 
     /// <summary>
-    /// Создает базу данных и таблицы при первом запуске приложения.
+    /// Применяет все непримененные миграции к базе данных приложения.
     /// </summary>
     /// <param name="app">Экземпляр веб-приложения.</param>
-    private static void EnsureDatabaseCreated(this WebApplication app)
+    private static void ApplyDatabaseMigrations(this WebApplication app)
     {
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Database.EnsureCreated();
+        db.Database.Migrate();
     }
+
 }

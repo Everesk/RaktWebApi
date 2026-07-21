@@ -12,7 +12,7 @@ using RaktWebApi.Data;
 namespace RaktWebApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260721141842_InitialCreate")]
+    [Migration("20260721142039_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -28,58 +28,72 @@ namespace RaktWebApi.Migrations
             modelBuilder.Entity("RaktWebApi.Models.Booking", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<Guid>("EventId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_id");
 
                     b.Property<DateTimeOffset?>("ProcessedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_bookings");
 
                     b.HasIndex("EventId");
 
-                    b.ToTable("Bookings", (string)null);
+                    b.ToTable("bookings", (string)null);
                 });
 
             modelBuilder.Entity("RaktWebApi.Models.Event", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<int>("AvailableSeats")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("available_seats");
 
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
 
                     b.Property<DateTimeOffset>("EndAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("end_at");
 
                     b.Property<DateTimeOffset>("StartAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start_at");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
 
                     b.Property<int>("TotalSeats")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("total_seats");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_events");
 
-                    b.ToTable("Events", (string)null);
+                    b.ToTable("events", (string)null);
                 });
 
             modelBuilder.Entity("RaktWebApi.Models.Booking", b =>
@@ -88,7 +102,8 @@ namespace RaktWebApi.Migrations
                         .WithMany("Bookings")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_bookings_events_event_id");
 
                     b.Navigation("Event");
                 });
