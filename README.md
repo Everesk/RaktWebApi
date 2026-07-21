@@ -59,7 +59,7 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
   - Helpers - формирование ProblemDetails
 - `Data` - EF Core контекст, конфигурации и интерсепторы
 
-### Тестовый проект Rakt.Tests
+### Тестовый проект Rakt.UnitTests
 
 - Unit-тесты сервисов, маппинга и фоновой обработки
 - Используется FluentAssertions

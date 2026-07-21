@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Rakt.Tests")]
+[assembly: InternalsVisibleTo("Rakt.UnitTests")]
