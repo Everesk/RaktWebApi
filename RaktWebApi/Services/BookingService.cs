@@ -1,7 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using RaktWebApi.Common.Exceptions;
-using RaktWebApi.Data;
 using RaktWebApi.Models;
+using RaktWebApi.Repositories;
 
 namespace RaktWebApi.Services;
 
@@ -10,16 +9,15 @@ namespace RaktWebApi.Services;
 /// </summary>
 public sealed class BookingService : IBookingService
 {
-    private static readonly SemaphoreSlim BookingSemaphore = new(1, 1);
-    private readonly AppDbContext _context;
+    private readonly IBookingRepository _bookingRepository;
 
     /// <summary>
     /// Создает сервис бронирований.
     /// </summary>
-    /// <param name="context">Контекст базы данных приложения.</param>
-    public BookingService(AppDbContext context)
+    /// <param name="bookingRepository">Репозиторий бронирований.</param>
+    public BookingService(IBookingRepository bookingRepository)
     {
-        _context = context;
+        _bookingRepository = bookingRepository;
     }
 
     /// <summary>
@@ -29,30 +27,7 @@ public sealed class BookingService : IBookingService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        await BookingSemaphore.WaitAsync(cancellationToken);
-        try
-        {
-            var eventEntity = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId, cancellationToken);
-            if (eventEntity is null)
-            {
-                throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
-            }
-
-            if (!eventEntity.TryReserveSeats())
-            {
-                throw new NoAvailableSeatsException("Мест нет, уйдите");
-            }
-
-            var booking = new Booking(eventId);
-            await _context.Bookings.AddAsync(booking, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return booking;
-        }
-        finally
-        {
-            BookingSemaphore.Release();
-        }
+        return await _bookingRepository.CreateForEventAsync(eventId, cancellationToken);
     }
 
     /// <summary>
@@ -62,8 +37,7 @@ public sealed class BookingService : IBookingService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var booking = await _context.Bookings.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == bookingId, cancellationToken);
+        var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
 
         return booking ?? throw new NotFoundException($"Бронь с идентификатором '{bookingId}' не найдена.");
     }
@@ -75,18 +49,6 @@ public sealed class BookingService : IBookingService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var eventExists = await _context.Events.AsNoTracking()
-            .AnyAsync(x => x.Id == eventId, cancellationToken);
-
-        if (!eventExists)
-        {
-            throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
-        }
-
-        var bookings = await _context.Bookings.AsNoTracking()
-            .Where(booking => booking.EventId == eventId)
-            .ToListAsync(cancellationToken);
-
-        return bookings;
+        return await _bookingRepository.GetByEventIdAsync(eventId, cancellationToken);
     }
 }

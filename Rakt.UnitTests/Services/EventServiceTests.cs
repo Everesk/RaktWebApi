@@ -5,6 +5,7 @@ using RaktWebApi.Common.Exceptions;
 using RaktWebApi.Models;
 using RaktWebApi.Models.DTO;
 using RaktWebApi.Services;
+using RaktWebApi.Repositories;
 using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;
@@ -21,6 +22,7 @@ public class EventServiceTests : InMemoryDbTestBase
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IEventService, EventService>();
+        services.AddScoped<IEventRepository, EventRepository>();
     }
 
     /// <summary>

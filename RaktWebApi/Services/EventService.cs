@@ -1,9 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using RaktWebApi.Common.Exceptions;
-using RaktWebApi.Data;
 using RaktWebApi.Mappers;
 using RaktWebApi.Models;
 using RaktWebApi.Models.DTO;
+using RaktWebApi.Repositories;
 
 namespace RaktWebApi.Services;
 
@@ -12,15 +11,15 @@ namespace RaktWebApi.Services;
 /// </summary>
 public sealed class EventService : IEventService
 {
-    private readonly AppDbContext _context;
+    private readonly IEventRepository _eventRepository;
 
     /// <summary>
     /// Создает сервис событий.
     /// </summary>
-    /// <param name="context">Контекст базы данных приложения.</param>
-    public EventService(AppDbContext context)
+    /// <param name="eventRepository">Репозиторий событий.</param>
+    public EventService(IEventRepository eventRepository)
     {
-        _context = context;
+        _eventRepository = eventRepository;
     }
 
     /// <summary>
@@ -30,7 +29,7 @@ public sealed class EventService : IEventService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var events = await _context.Events.AsNoTracking().ToListAsync(cancellationToken);
+        var events = await _eventRepository.GetAllAsync(cancellationToken);
         IEnumerable<Event> filteredEvents = events;
 
         if (!string.IsNullOrWhiteSpace(query.Title))
@@ -74,8 +73,7 @@ public sealed class EventService : IEventService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var existingEvent = await _context.Events.AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+        var existingEvent = await _eventRepository.GetByIdAsync(id, cancellationToken);
 
         return (existingEvent ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.")).ToInfoDto();
     }
@@ -88,8 +86,7 @@ public sealed class EventService : IEventService
         cancellationToken.ThrowIfCancellationRequested();
 
         var entity = dto.CreateFromDto();
-        await _context.Events.AddAsync(entity, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
+        await _eventRepository.AddAsync(entity, cancellationToken);
         return entity.ToInfoDto();
     }
 
@@ -100,11 +97,11 @@ public sealed class EventService : IEventService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var existingEvent = await _context.Events.FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
+        var existingEvent = await _eventRepository.GetForUpdateAsync(id, cancellationToken)
             ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
 
         existingEvent.UpdateFromDto(dto);
-        await _context.SaveChangesAsync(cancellationToken);
+        await _eventRepository.UpdateAsync(cancellationToken);
     }
 
     /// <summary>
@@ -114,11 +111,10 @@ public sealed class EventService : IEventService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var existingEvent = await _context.Events.FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
+        var existingEvent = await _eventRepository.GetForUpdateAsync(id, cancellationToken)
             ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
 
-        _context.Events.Remove(existingEvent);
-        await _context.SaveChangesAsync(cancellationToken);
+        await _eventRepository.DeleteAsync(existingEvent, cancellationToken);
     }
 
     /// <summary>
