@@ -1,6 +1,6 @@
 # RaktWebApi
 
-Практикум, спринт 1–5  
+Практикум, спринт 1–6
 Шундерюк Михаил
 
 ## Описание проекта
@@ -19,7 +19,7 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
 - фоновую обработку бронирований через `BackgroundService`
 - контроль доступных мест на событиях
 - защиту критических секций при конкурентном бронировании
-- базовое покрытие тестами
+- unit- и интеграционные тесты
 
 Приложение позволяет:
 - получать список событий
@@ -32,7 +32,7 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
 - автоматически переводить брони из `Pending` в `Confirmed` в фоне
 - отклонять брони, если событие удалено до фоновой обработки
 
-Приложение работает с PostgreSQL, а в тестах используется InMemory-провайдер EF Core.
+Приложение работает с PostgreSQL. Схема базы данных управляется миграциями EF Core.
 
 ## Стек
 
@@ -42,6 +42,8 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
 - Serilog
 - xUnit
 - FluentAssertions
+- EF Core Migrations
+- Testcontainers PostgreSQL
 
 ## Архитектура проекта
 
@@ -63,6 +65,11 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
 
 - Unit-тесты сервисов, маппинга и фоновой обработки
 - Используется FluentAssertions
+
+### Тестовый проект Rakt.IntegrationTests
+
+- Интеграционные тесты репозиториев на реальном PostgreSQL
+- Используется Testcontainers: один временный контейнер PostgreSQL и чистая база перед каждым тестом
 
 ## Требования
 
@@ -105,6 +112,22 @@ docker compose down
 
 Данные PostgreSQL сохраняются в именованном томе `eventapi_pgdata`.
 
+### Миграции EF Core
+
+Схема базы данных создаётся и обновляется миграциями EF Core. При запуске приложение применяет все неприменённые миграции через `Database.Migrate()`.
+
+Создать миграцию из корня репозитория:
+
+```bash
+dotnet ef migrations add <MigrationName> --project RaktWebApi/RaktWebApi.csproj --startup-project RaktWebApi/RaktWebApi.csproj
+```
+
+Применить миграции вручную:
+
+```bash
+dotnet ef database update --project RaktWebApi/RaktWebApi.csproj --startup-project RaktWebApi/RaktWebApi.csproj
+```
+
 Перейти в папку проекта:
 ```
 cd RaktWebApi/RaktWebApi
@@ -123,7 +146,7 @@ dotnet run --launch-profile https
 - http://localhost:5007
 - https://localhost:7130
 
-При запуске приложение автоматически создаёт схему базы данных через `EnsureCreated()`, если базы данных или таблиц ещё нет.
+При запуске приложение автоматически применяет все неприменённые миграции EF Core.
 
 ## Swagger
 
@@ -407,10 +430,18 @@ application/json
 - Swagger
 - файл RaktWebApi.http
 
-Для запуска тестов:
+Для запуска unit-тестов:
 
 ```bash
-dotnet test
+dotnet test Rakt.UnitTests/Rakt.UnitTests.csproj
 ```
 
-Тестовый проект использует `Microsoft.EntityFrameworkCore.InMemory`, поэтому PostgreSQL для тестов не требуется.
+Unit-тесты используют `Microsoft.EntityFrameworkCore.InMemory`, поэтому PostgreSQL для них не требуется.
+
+Для запуска интеграционных тестов:
+
+```bash
+dotnet test Rakt.IntegrationTests/Rakt.IntegrationTests.csproj
+```
+
+Интеграционные тесты запускают временный контейнер PostgreSQL через Testcontainers. Перед запуском Docker Desktop или другой Docker daemon должен быть запущен; продакшен-база и контейнер из `docker-compose.yml` при этом не используются.
