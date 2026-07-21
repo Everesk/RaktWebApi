@@ -54,9 +54,18 @@ public static class WebApplicationExtensions
     /// <param name="app">Экземпляр веб-приложения.</param>
     private static void ApplyDatabaseMigrations(this WebApplication app)
     {
-        using var scope = app.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Database.Migrate();
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Database.Migrate();
+            Log.Information("Миграции базы данных успешно применены");
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Не удалось применить миграции базы данных");
+            throw;
+        }
     }
 
 }

@@ -29,40 +29,15 @@ public sealed class EventService : IEventService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var events = await _eventRepository.GetAllAsync(cancellationToken);
-        IEnumerable<Event> filteredEvents = events;
-
-        if (!string.IsNullOrWhiteSpace(query.Title))
-        {
-            filteredEvents = filteredEvents.Where(e =>
-                e.Title.Contains(query.Title, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (query.From.HasValue)
-        {
-            filteredEvents = filteredEvents.Where(e => e.StartAt >= query.From.Value);
-        }
-
-        if (query.To.HasValue)
-        {
-            filteredEvents = filteredEvents.Where(e => e.EndAt <= query.To.Value);
-        }
-
-        filteredEvents = filteredEvents
-            .OrderBy(e => e.StartAt)
-            .ThenBy(e => e.Title)
-            .ThenBy(e => e.Id);
-
-        var totalCount = filteredEvents.Count();
-        var items = ApplyPaging(filteredEvents, query);
+        var events = await _eventRepository.GetAllAsync(query, cancellationToken);
 
         return new PaginatedResult<EventInfoDto>
         {
-            TotalCount = totalCount,
-            Items = items.Select(e => e.ToInfoDto()).ToList(),
-            Page = query.Page ?? 1,
-            PageSize = query.PageSize ?? items.Count,
-            CurrentCount = items.Count
+            TotalCount = events.TotalCount,
+            Items = events.Items.Select(eventEntity => eventEntity.ToInfoDto()).ToList(),
+            Page = events.Page,
+            PageSize = events.PageSize,
+            CurrentCount = events.CurrentCount
         };
     }
 
@@ -117,22 +92,4 @@ public sealed class EventService : IEventService
         await _eventRepository.DeleteAsync(existingEvent, cancellationToken);
     }
 
-    /// <summary>
-    /// Применяет постраничную выборку к уже отсортированной последовательности.
-    /// </summary>
-    private static List<Event> ApplyPaging(IEnumerable<Event> events, EventQueryDto query)
-    {
-        if (query.Page.HasValue && query.PageSize.HasValue)
-        {
-            var page = query.Page.Value;
-            var pageSize = query.PageSize.Value;
-
-            return events
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-        }
-
-        return events.ToList();
-    }
 }

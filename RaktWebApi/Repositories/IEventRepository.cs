@@ -1,4 +1,5 @@
 using RaktWebApi.Models;
+using RaktWebApi.Models.DTO;
 
 namespace RaktWebApi.Repositories;
 
@@ -7,8 +8,8 @@ namespace RaktWebApi.Repositories;
 /// </summary>
 public interface IEventRepository
 {
-    /// <summary>Возвращает все события без отслеживания изменений.</summary>
-    Task<IReadOnlyCollection<Event>> GetAllAsync(CancellationToken cancellationToken = default);
+    /// <summary>Возвращает отфильтрованную и постраничную выборку событий без отслеживания изменений.</summary>
+    Task<PaginatedResult<Event>> GetAllAsync(EventQueryDto query, CancellationToken cancellationToken = default);
 
     /// <summary>Возвращает событие по идентификатору без отслеживания изменений.</summary>
     Task<Event?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
