@@ -51,7 +51,45 @@ public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreS
         await Assert.ThrowsAsync<NoAvailableSeatsException>(() => repositories.Bookings.CreateForEventAsync(eventEntity.Id));
     }
 
-    
+    /// <summary>Проверяет атомарность конкурентного бронирования при ограниченном числе мест.</summary>
+    [Fact]
+    public async Task CreateForEventAsync_WhenRequestsAreConcurrent_CreatesBookingsOnlyForAvailableSeats()
+    {
+        await using var repositories = CreateRepositories();
+        var eventEntity = await AddEventAsync(repositories, totalSeats: ConcurrentBookingTotalSeats);
+        var startGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var attempts = Enumerable.Range(0, ConcurrentBookingRequestsCount).Select(async _ =>
+        {
+            await startGate.Task;
+            await using var context = Fixture.CreateDbContext();
+            var repository = new BookingRepository(context);
+
+            try
+            {
+                await repository.CreateForEventAsync(eventEntity.Id);
+                return true;
+            }
+            catch (NoAvailableSeatsException)
+            {
+                return false;
+            }
+        });
+
+        startGate.SetResult();
+        var results = await Task.WhenAll(attempts);
+
+        await using var verificationContext = Fixture.CreateDbContext();
+        var verificationRepository = new BookingRepository(verificationContext);
+        var bookings = await verificationRepository.GetByEventIdAsync(eventEntity.Id);
+        var storedEvent = await repositories.Events.GetByIdAsync(eventEntity.Id);
+
+        Assert.Equal(ConcurrentBookingTotalSeats, results.Count(result => result));
+        Assert.Equal(ConcurrentBookingRequestsCount - ConcurrentBookingTotalSeats, results.Count(result => !result));
+        Assert.Equal(ConcurrentBookingTotalSeats, bookings.Count);
+        Assert.All(bookings, booking => Assert.Equal(BookingStatus.Pending, booking.Status));
+        Assert.Equal(0, storedEvent!.AvailableSeats);
+    }
 
     /// <summary>Проверяет получение существующей брони и отсутствие результата для неизвестного идентификатора.</summary>
     [Fact]
