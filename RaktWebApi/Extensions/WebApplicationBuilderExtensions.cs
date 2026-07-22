@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RaktWebApi.Data;
 using RaktWebApi.Data.Interceptors;
 using RaktWebApi.Options;
+using RaktWebApi.Repositories;
 using RaktWebApi.Services;
 using Serilog;
 using Serilog.Events;
@@ -57,6 +58,8 @@ public static class WebApplicationBuilderExtensions
 
         builder.Services.AddScoped<IEventService, EventService>();
         builder.Services.AddScoped<IBookingService, BookingService>();
+        builder.Services.AddScoped<IEventRepository, EventRepository>();
+        builder.Services.AddScoped<IBookingRepository, BookingRepository>();
         builder.Services.AddSingleton<IBookingProcessor, BookingProcessor>();
         builder.Services.AddHostedService<BookingBackgroundService>();
         return builder;

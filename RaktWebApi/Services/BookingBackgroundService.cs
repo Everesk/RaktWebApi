@@ -1,9 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using RaktWebApi.Data;
 using RaktWebApi.Models;
 using RaktWebApi.Options;
+using RaktWebApi.Repositories;
 
 namespace RaktWebApi.Services;
 
@@ -53,12 +52,8 @@ public sealed class BookingBackgroundService(
         List<Guid> pendingBookingIds;
         await using (var scope = scopeFactory.CreateAsyncScope())
         {
-            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            pendingBookingIds = await context.Bookings
-                .AsNoTracking()
-                .Where(booking => booking.Status == BookingStatus.Pending)
-                .Select(booking => booking.Id)
-                .ToListAsync(cancellationToken);
+            var bookingRepository = scope.ServiceProvider.GetRequiredService<IBookingRepository>();
+            pendingBookingIds = (await bookingRepository.GetPendingIdsAsync(cancellationToken)).ToList();
         }
 
         var tasks = pendingBookingIds.Select(bookingId => ProcessBookingAsync(bookingId, cancellationToken));
@@ -80,9 +75,8 @@ public sealed class BookingBackgroundService(
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();
-            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var booking = await context.Bookings
-                .FirstOrDefaultAsync(item => item.Id == bookingId, cancellationToken);
+            var bookingRepository = scope.ServiceProvider.GetRequiredService<IBookingRepository>();
+            var booking = await bookingRepository.GetByIdAsync(bookingId, cancellationToken);
 
             if (booking is null || booking.Status != BookingStatus.Pending)
             {
@@ -141,9 +135,8 @@ public sealed class BookingBackgroundService(
     private async Task<bool> TryRejectBookingAsync(Guid bookingId, CancellationToken cancellationToken)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var booking = await context.Bookings
-            .FirstOrDefaultAsync(item => item.Id == bookingId, cancellationToken);
+        var bookingRepository = scope.ServiceProvider.GetRequiredService<IBookingRepository>();
+        var booking = await bookingRepository.GetByIdAsync(bookingId, cancellationToken);
 
         if (booking is null)
         {

@@ -8,6 +8,7 @@ using RaktWebApi.Data;
 using RaktWebApi.Models;
 using RaktWebApi.Options;
 using RaktWebApi.Services;
+using RaktWebApi.Repositories;
 using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;
@@ -24,6 +25,7 @@ public class BookingBackgroundServiceTests : InMemoryDbTestBase
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddSingleton<IBookingProcessor, BookingProcessor>();
         services.AddOptions<BookingProcessingOptions>().Configure(options => options.AttemptsLimit = 3);
         services.AddLogging();

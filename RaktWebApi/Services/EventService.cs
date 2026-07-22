@@ -1,9 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using RaktWebApi.Common.Exceptions;
-using RaktWebApi.Data;
 using RaktWebApi.Mappers;
 using RaktWebApi.Models;
 using RaktWebApi.Models.DTO;
+using RaktWebApi.Repositories;
 
 namespace RaktWebApi.Services;
 
@@ -12,15 +11,15 @@ namespace RaktWebApi.Services;
 /// </summary>
 public sealed class EventService : IEventService
 {
-    private readonly AppDbContext _context;
+    private readonly IEventRepository _eventRepository;
 
     /// <summary>
     /// Создает сервис событий.
     /// </summary>
-    /// <param name="context">Контекст базы данных приложения.</param>
-    public EventService(AppDbContext context)
+    /// <param name="eventRepository">Репозиторий событий.</param>
+    public EventService(IEventRepository eventRepository)
     {
-        _context = context;
+        _eventRepository = eventRepository;
     }
 
     /// <summary>
@@ -30,40 +29,15 @@ public sealed class EventService : IEventService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var events = await _context.Events.AsNoTracking().ToListAsync(cancellationToken);
-        IEnumerable<Event> filteredEvents = events;
-
-        if (!string.IsNullOrWhiteSpace(query.Title))
-        {
-            filteredEvents = filteredEvents.Where(e =>
-                e.Title.Contains(query.Title, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (query.From.HasValue)
-        {
-            filteredEvents = filteredEvents.Where(e => e.StartAt >= query.From.Value);
-        }
-
-        if (query.To.HasValue)
-        {
-            filteredEvents = filteredEvents.Where(e => e.EndAt <= query.To.Value);
-        }
-
-        filteredEvents = filteredEvents
-            .OrderBy(e => e.StartAt)
-            .ThenBy(e => e.Title)
-            .ThenBy(e => e.Id);
-
-        var totalCount = filteredEvents.Count();
-        var items = ApplyPaging(filteredEvents, query);
+        var events = await _eventRepository.GetAllAsync(query, cancellationToken);
 
         return new PaginatedResult<EventInfoDto>
         {
-            TotalCount = totalCount,
-            Items = items.Select(e => e.ToInfoDto()).ToList(),
-            Page = query.Page ?? 1,
-            PageSize = query.PageSize ?? items.Count,
-            CurrentCount = items.Count
+            TotalCount = events.TotalCount,
+            Items = events.Items.Select(eventEntity => eventEntity.ToInfoDto()).ToList(),
+            Page = events.Page,
+            PageSize = events.PageSize,
+            CurrentCount = events.CurrentCount
         };
     }
 
@@ -74,8 +48,7 @@ public sealed class EventService : IEventService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var existingEvent = await _context.Events.AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+        var existingEvent = await _eventRepository.GetByIdAsync(id, cancellationToken);
 
         return (existingEvent ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.")).ToInfoDto();
     }
@@ -88,8 +61,7 @@ public sealed class EventService : IEventService
         cancellationToken.ThrowIfCancellationRequested();
 
         var entity = dto.CreateFromDto();
-        await _context.Events.AddAsync(entity, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
+        await _eventRepository.AddAsync(entity, cancellationToken);
         return entity.ToInfoDto();
     }
 
@@ -100,11 +72,11 @@ public sealed class EventService : IEventService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var existingEvent = await _context.Events.FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
+        var existingEvent = await _eventRepository.GetForUpdateAsync(id, cancellationToken)
             ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
 
         existingEvent.UpdateFromDto(dto);
-        await _context.SaveChangesAsync(cancellationToken);
+        await _eventRepository.UpdateAsync(cancellationToken);
     }
 
     /// <summary>
@@ -114,29 +86,10 @@ public sealed class EventService : IEventService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var existingEvent = await _context.Events.FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
+        var existingEvent = await _eventRepository.GetForUpdateAsync(id, cancellationToken)
             ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
 
-        _context.Events.Remove(existingEvent);
-        await _context.SaveChangesAsync(cancellationToken);
+        await _eventRepository.DeleteAsync(existingEvent, cancellationToken);
     }
 
-    /// <summary>
-    /// Применяет постраничную выборку к уже отсортированной последовательности.
-    /// </summary>
-    private static List<Event> ApplyPaging(IEnumerable<Event> events, EventQueryDto query)
-    {
-        if (query.Page.HasValue && query.PageSize.HasValue)
-        {
-            var page = query.Page.Value;
-            var pageSize = query.PageSize.Value;
-
-            return events
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-        }
-
-        return events.ToList();
-    }
 }

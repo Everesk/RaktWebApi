@@ -1,7 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using RaktWebApi.Data;
 using RaktWebApi.Models;
+using RaktWebApi.Repositories;
 
 namespace RaktWebApi.Services;
 
@@ -41,37 +40,26 @@ public sealed class BookingProcessor : IBookingProcessor
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
-            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var trackedBooking = await context.Bookings
-                .FirstOrDefaultAsync(item => item.Id == booking.Id, cancellationToken);
-
-            if (trackedBooking is null)
+            var bookingRepository = scope.ServiceProvider.GetRequiredService<IBookingRepository>();
+            var result = await bookingRepository.ConfirmAsync(booking.Id, cancellationToken);
+            if (result == BookingConfirmationResult.NotFound)
             {
                 return;
             }
 
-            var eventEntity = await context.Events
-                .FirstOrDefaultAsync(item => item.Id == trackedBooking.EventId, cancellationToken);
-
-            if (eventEntity is null)
+            if (result == BookingConfirmationResult.EventNotFound)
             {
-                trackedBooking.Reject(DateTimeOffset.UtcNow);
-                await context.SaveChangesAsync(cancellationToken);
-
                 _logger.LogWarning(
                     "Бронь {BookingId} отклонена, потому что событие {EventId} удалено",
-                    trackedBooking.Id,
-                    trackedBooking.EventId);
+                    booking.Id,
+                    booking.EventId);
                 return;
             }
-
-            trackedBooking.Confirm(DateTimeOffset.UtcNow);
-            await context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation(
                 "Бронь {BookingId} переведена в статус {Status}",
-                trackedBooking.Id,
-                trackedBooking.Status);
+                booking.Id,
+                BookingStatus.Confirmed);
         }
         finally
         {
@@ -95,25 +83,11 @@ public sealed class BookingProcessor : IBookingProcessor
             try
             {
                 await using var scope = _scopeFactory.CreateAsyncScope();
-                var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var trackedBooking = await context.Bookings
-                    .FirstOrDefaultAsync(item => item.Id == booking.Id, cancellationToken);
-
-                if (trackedBooking is null || trackedBooking.Status is BookingStatus.Rejected or BookingStatus.Confirmed)
+                var bookingRepository = scope.ServiceProvider.GetRequiredService<IBookingRepository>();
+                if (!await bookingRepository.TryRejectAsync(booking.Id, cancellationToken))
                 {
-                    return true;
+                    return false;
                 }
-
-                var eventEntity = await context.Events
-                    .FirstOrDefaultAsync(item => item.Id == trackedBooking.EventId, cancellationToken);
-
-                if (eventEntity is not null)
-                {
-                    eventEntity.ReleaseSeats();
-                }
-
-                trackedBooking.Reject(DateTimeOffset.UtcNow);
-                await context.SaveChangesAsync(cancellationToken);
             }
             finally
             {
