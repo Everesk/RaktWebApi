@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using RaktApi.Domain;
 
-namespace RaktWebApi.Data.Interceptors;
+namespace RaktApi.Infrastracture.Data.Interceptors;
 
 /// <summary>
 /// Перехватчик EF Core, который автоматически проставляет время создания новым бронированиям.

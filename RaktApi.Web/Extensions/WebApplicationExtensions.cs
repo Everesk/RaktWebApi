@@ -1,8 +1,6 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using RaktWebApi.Common.Helpers;
 using RaktWebApi.Common.Middleware;
-using RaktWebApi.Data;
+using RaktApi.Infrastracture.Extensions;
 using Serilog;
 
 namespace RaktWebApi.Extensions;
@@ -56,9 +54,7 @@ public static class WebApplicationExtensions
     {
         try
         {
-            using var scope = app.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Database.Migrate();
+            app.Services.ApplyInfrastructureMigrations();
             Log.Information("Миграции базы данных успешно применены");
         }
         catch (Exception exception)

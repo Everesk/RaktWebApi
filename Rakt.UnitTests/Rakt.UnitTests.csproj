@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\RaktApi.Infrastracture\RaktApi.Infrastracture.csproj" />
     <ProjectReference Include="..\RaktApi.Web\RaktApi.Web.csproj" />
   </ItemGroup>
 

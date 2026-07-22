@@ -2,9 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using RaktApi.Application.Ports;
 using RaktApi.Domain;
 using RaktApi.Domain.Exceptions;
-using RaktWebApi.Data;
+using RaktApi.Infrastracture.Data;
 
-namespace RaktWebApi.Repositories;
+namespace RaktApi.Infrastracture.Repositories;
 
 /// <summary>
 /// Репозиторий для доступа к бронированиям через EF Core.

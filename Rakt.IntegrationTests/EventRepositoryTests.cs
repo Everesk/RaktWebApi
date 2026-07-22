@@ -165,7 +165,7 @@ public sealed class EventRepositoryTests(PostgreSqlFixture fixture) : PostgreSql
     private static DateTimeOffset Date(int hour) => new(2026, 1, 1, hour, 0, 0, TimeSpan.Zero);
 
     /// <summary>Сохраняет набор событий в репозитории.</summary>
-    private static async Task AddEventsAsync(RaktWebApi.Repositories.EventRepository repository, params Event[] events)
+    private static async Task AddEventsAsync(RaktApi.Infrastracture.Repositories.EventRepository repository, params Event[] events)
     {
         foreach (var eventEntity in events)
         {

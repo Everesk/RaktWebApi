@@ -3,14 +3,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using RaktWebApi.Data.Interceptors;
-using RaktWebApi.Data;
+using RaktApi.Infrastracture.Data.Interceptors;
+using RaktApi.Infrastracture.Data;
 using RaktApi.Domain;
 using RaktWebApi.Options;
 using RaktApi.Application.Ports;
 using RaktApi.Application.Services;
 using RaktWebApi.Services;
-using RaktWebApi.Repositories;
+using RaktApi.Infrastracture.Repositories;
 using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;

@@ -6,7 +6,7 @@ using RaktApi.Domain.Exceptions;
 using RaktApi.Application.DTO;
 using RaktApi.Application.Ports;
 using RaktApi.Application.Services;
-using RaktWebApi.Repositories;
+using RaktApi.Infrastracture.Repositories;
 using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;

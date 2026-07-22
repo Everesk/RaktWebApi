@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using RaktApi.Application.DTO;
 using RaktApi.Application.Ports;
-using RaktWebApi.Data;
+using RaktApi.Infrastracture.Data;
 using RaktApi.Domain;
 
-namespace RaktWebApi.Repositories;
+namespace RaktApi.Infrastracture.Repositories;
 
 /// <summary>
 /// Репозиторий для доступа к событиям через EF Core.
