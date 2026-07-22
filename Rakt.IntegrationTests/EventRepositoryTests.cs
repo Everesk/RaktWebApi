@@ -7,6 +7,7 @@ namespace Rakt.IntegrationTests;
 /// Интеграционные тесты репозитория событий на PostgreSQL в Testcontainers.
 /// </summary>
 [Collection(PostgreSqlCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class EventRepositoryTests(PostgreSqlFixture fixture) : PostgreSqlTestBase(fixture)
 {
     /// <summary>Проверяет добавление и получение события по идентификатору.</summary>

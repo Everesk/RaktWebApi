@@ -8,6 +8,7 @@ namespace Rakt.IntegrationTests;
 /// Интеграционные тесты репозитория бронирований на PostgreSQL в Testcontainers.
 /// </summary>
 [Collection(PostgreSqlCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreSqlTestBase(fixture)
 {
     // Количество мест в сценарии конкурентного бронирования.
