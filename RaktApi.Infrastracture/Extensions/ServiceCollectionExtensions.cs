@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using RaktApi.Application.Ports;
 using RaktApi.Infrastracture.Data;
 using RaktApi.Infrastracture.Data.Interceptors;
+using RaktApi.Infrastracture.BackgroundServices;
+using RaktApi.Infrastracture.Options;
 using RaktApi.Infrastracture.Repositories;
 
 namespace RaktApi.Infrastracture.Extensions;
@@ -30,6 +32,12 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IBookingRepository, BookingRepository>();
+
+        services.AddOptions<BookingProcessingOptions>()
+            .Bind(configuration.GetSection(BookingProcessingOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddHostedService<BookingBackgroundService>();
 
         return services;
     }

@@ -1,7 +1,3 @@
-using RaktApi.Application.Services;
-using RaktApi.Infrastracture.Extensions;
-using RaktWebApi.Options;
-using RaktWebApi.Services;
 using Serilog;
 using Serilog.Events;
 using System.Reflection;
@@ -40,24 +36,6 @@ public static class WebApplicationBuilderExtensions
             });
         }
 
-        builder.AddServices();
-
-        return builder;
-    }
-
-    private static WebApplicationBuilder AddServices(this WebApplicationBuilder builder)
-    {
-        builder.Services.AddOptions<BookingProcessingOptions>()
-            .Bind(builder.Configuration.GetSection(BookingProcessingOptions.SectionName))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-
-        builder.Services.AddInfrastructure(builder.Configuration);
-
-        builder.Services.AddScoped<IEventService, EventService>();
-        builder.Services.AddScoped<IBookingService, BookingService>();
-        builder.Services.AddScoped<IBookingProcessor, BookingProcessor>();
-        builder.Services.AddHostedService<BookingBackgroundService>();
         return builder;
     }
 

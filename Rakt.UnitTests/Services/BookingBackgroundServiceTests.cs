@@ -5,11 +5,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using RaktApi.Infrastracture.Data.Interceptors;
 using RaktApi.Infrastracture.Data;
+using RaktApi.Infrastracture.BackgroundServices;
+using RaktApi.Infrastracture.Options;
 using RaktApi.Domain;
-using RaktWebApi.Options;
 using RaktApi.Application.Ports;
 using RaktApi.Application.Services;
-using RaktWebApi.Services;
 using RaktApi.Infrastracture.Repositories;
 using Rakt.Tests.Infrastructure;
 
@@ -28,7 +28,8 @@ public class BookingBackgroundServiceTests : InMemoryDbTestBase
     {
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IBookingRepository, BookingRepository>();
-        services.AddSingleton<IBookingProcessor, BookingProcessor>();
+        services.AddScoped<IBookingProcessor, BookingProcessor>();
+        services.AddScoped<IBookingProcessingService, BookingProcessingService>();
         services.AddOptions<BookingProcessingOptions>().Configure(options => options.AttemptsLimit = 3);
         services.AddLogging();
     }
