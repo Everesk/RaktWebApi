@@ -7,6 +7,8 @@ using RaktWebApi.Data.Interceptors;
 using RaktWebApi.Data;
 using RaktApi.Domain;
 using RaktWebApi.Options;
+using RaktApi.Application.Ports;
+using RaktApi.Application.Services;
 using RaktWebApi.Services;
 using RaktWebApi.Repositories;
 using Rakt.Tests.Infrastructure;

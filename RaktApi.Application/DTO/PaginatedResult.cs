@@ -1,4 +1,4 @@
-﻿namespace RaktWebApi.Models;
+﻿namespace RaktApi.Application.DTO;
 
 /// <summary>
 /// Результат постраничного вывода данных.

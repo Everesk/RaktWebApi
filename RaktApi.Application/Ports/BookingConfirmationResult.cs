@@ -1,4 +1,4 @@
-namespace RaktWebApi.Repositories;
+namespace RaktApi.Application.Ports;
 
 /// <summary>
 /// Описывает результат попытки подтвердить бронирование.

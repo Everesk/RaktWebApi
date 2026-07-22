@@ -1,8 +1,7 @@
 using RaktApi.Domain;
-using RaktWebApi.Models;
-using RaktWebApi.Models.DTO;
+using RaktApi.Application.DTO;
 
-namespace RaktWebApi.Services;
+namespace RaktApi.Application.Services;
 
 /// <summary>
 /// Интерфейс сервиса для управления событиями.

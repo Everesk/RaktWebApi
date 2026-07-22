@@ -1,5 +1,5 @@
 using RaktApi.Domain;
-using RaktWebApi.Models.DTO;
+using RaktApi.Application.DTO;
 
 namespace Rakt.IntegrationTests;
 

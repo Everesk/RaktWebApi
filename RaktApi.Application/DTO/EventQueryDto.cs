@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using RaktApi.Domain;
 
-namespace RaktWebApi.Models.DTO;
+namespace RaktApi.Application.DTO;
 
 /// <summary>
 /// Параметры запроса для фильтрации и пагинации событий.

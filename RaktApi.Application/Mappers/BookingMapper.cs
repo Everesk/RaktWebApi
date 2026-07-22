@@ -1,7 +1,7 @@
 using RaktApi.Domain;
-using RaktWebApi.Models.DTO;
+using RaktApi.Application.DTO;
 
-namespace RaktWebApi.Mappers;
+namespace RaktApi.Application.Mappers;
 
 /// <summary>
 /// Методы расширения для преобразования Booking в DTO.

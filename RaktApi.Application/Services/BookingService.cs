@@ -1,8 +1,8 @@
 using RaktApi.Domain;
 using RaktApi.Domain.Exceptions;
-using RaktWebApi.Repositories;
+using RaktApi.Application.Ports;
 
-namespace RaktWebApi.Services;
+namespace RaktApi.Application.Services;
 
 /// <summary>
 /// Сервис для управления бронированиями.

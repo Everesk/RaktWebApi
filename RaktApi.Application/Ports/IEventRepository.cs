@@ -1,8 +1,7 @@
 using RaktApi.Domain;
-using RaktWebApi.Models;
-using RaktWebApi.Models.DTO;
+using RaktApi.Application.DTO;
 
-namespace RaktWebApi.Repositories;
+namespace RaktApi.Application.Ports;
 
 /// <summary>
 /// Предоставляет доступ к данным событий.

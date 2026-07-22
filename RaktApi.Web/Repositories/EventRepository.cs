@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using RaktApi.Application.DTO;
+using RaktApi.Application.Ports;
 using RaktWebApi.Data;
 using RaktApi.Domain;
-using RaktWebApi.Models;
-using RaktWebApi.Models.DTO;
 
 namespace RaktWebApi.Repositories;
 

@@ -1,6 +1,6 @@
 using RaktApi.Domain;
 
-namespace RaktWebApi.Models.DTO;
+namespace RaktApi.Application.DTO;
 
 /// <summary>
 /// DTO для бронирования.

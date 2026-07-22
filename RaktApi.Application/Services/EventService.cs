@@ -1,11 +1,10 @@
 using RaktApi.Domain;
 using RaktApi.Domain.Exceptions;
-using RaktWebApi.Mappers;
-using RaktWebApi.Models;
-using RaktWebApi.Models.DTO;
-using RaktWebApi.Repositories;
+using RaktApi.Application.DTO;
+using RaktApi.Application.Mappers;
+using RaktApi.Application.Ports;
 
-namespace RaktWebApi.Services;
+namespace RaktApi.Application.Services;
 
 /// <summary>
 /// Сервис для управления событиями.

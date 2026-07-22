@@ -1,6 +1,6 @@
 using RaktApi.Domain;
 
-namespace RaktWebApi.Repositories;
+namespace RaktApi.Application.Ports;
 
 /// <summary>
 /// Предоставляет доступ к данным бронирований.

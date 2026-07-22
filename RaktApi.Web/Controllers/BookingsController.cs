@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using RaktApi.Application.DTO;
+using RaktApi.Application.Mappers;
+using RaktApi.Application.Services;
 using RaktApi.Domain;
-using RaktWebApi.Mappers;
-using RaktWebApi.Models.DTO;
-using RaktWebApi.Services;
 
 namespace RaktWebApi.Controllers;
 

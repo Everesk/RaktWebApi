@@ -1,6 +1,6 @@
 using RaktApi.Domain;
 
-namespace RaktWebApi.Services;
+namespace RaktApi.Application.Services;
 
 /// <summary>
 /// Интерфейс сервиса для работы с бронированиями.

@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using RaktApi.Domain;
 
-namespace RaktWebApi.Models.DTO;
+namespace RaktApi.Application.DTO;
 
 /// <summary>
 /// Базовый DTO события.

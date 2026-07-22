@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RaktApi.Application.Ports;
 using RaktApi.Domain;
 using RaktApi.Domain.Exceptions;
 using RaktWebApi.Data;

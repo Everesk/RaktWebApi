@@ -3,8 +3,9 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using RaktApi.Domain;
 using RaktApi.Domain.Exceptions;
-using RaktWebApi.Models.DTO;
-using RaktWebApi.Services;
+using RaktApi.Application.DTO;
+using RaktApi.Application.Ports;
+using RaktApi.Application.Services;
 using RaktWebApi.Repositories;
 using Rakt.Tests.Infrastructure;
 

@@ -78,7 +78,7 @@ public class Event
     /// <summary>
     /// Создает новое событие.
     /// </summary>
-    internal static Event Create(string title, string? description, DateTimeOffset startAt, DateTimeOffset endAt, int totalSeats)
+    public static Event Create(string title, string? description, DateTimeOffset startAt, DateTimeOffset endAt, int totalSeats)
     {
         return new Event(title, description, startAt, endAt, totalSeats);
     }
@@ -86,7 +86,7 @@ public class Event
     /// <summary>
     /// Полностью обновляет все свойства.
     /// </summary>
-    internal void Update(string title, string? description, DateTimeOffset startAt, DateTimeOffset endAt)
+    public void Update(string title, string? description, DateTimeOffset startAt, DateTimeOffset endAt)
     {
         Title = title;
         Description = description;
