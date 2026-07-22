@@ -1,4 +1,4 @@
-namespace RaktWebApi.Models;
+namespace RaktApi.Domain;
 
 /// <summary>
 /// Статус бронирования.

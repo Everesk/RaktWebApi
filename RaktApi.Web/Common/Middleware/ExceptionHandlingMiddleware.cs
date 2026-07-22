@@ -1,4 +1,4 @@
-﻿using RaktWebApi.Common.Exceptions;
+﻿using RaktApi.Domain.Exceptions;
 using RaktWebApi.Common.Helpers;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
@@ -67,7 +67,7 @@ public sealed class ExceptionHandlingMiddleware(
         return exception switch
         {
             NoAvailableSeatsException => (int)HttpStatusCode.Conflict,
-            ValidationException => (int)HttpStatusCode.BadRequest,
+            ValidationException or InvalidTotalSeatsException => (int)HttpStatusCode.BadRequest,
             NotFoundException => (int)HttpStatusCode.NotFound,
             BadHttpRequestException => (int)HttpStatusCode.BadRequest,
             _ => (int)HttpStatusCode.InternalServerError

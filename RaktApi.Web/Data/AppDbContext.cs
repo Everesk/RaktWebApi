@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using RaktWebApi.Models;
+using RaktApi.Domain;
 
 namespace RaktWebApi.Data;
 

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RaktWebApi.Data.Interceptors;
 using RaktWebApi.Data;
-using RaktWebApi.Models;
+using RaktApi.Domain;
 using RaktWebApi.Services;
 using RaktWebApi.Repositories;
 using Rakt.Tests.Infrastructure;

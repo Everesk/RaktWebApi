@@ -1,6 +1,6 @@
-using System.ComponentModel.DataAnnotations;
+using RaktApi.Domain.Exceptions;
 
-namespace RaktWebApi.Models;
+namespace RaktApi.Domain;
 
 /// <summary>
 /// Представляет событие.
@@ -68,7 +68,7 @@ public class Event
     }
 
     /// <summary>
-    /// Приватный конструктор для EF Core.
+    /// Приватный конструктор для материализации сущности.
     /// </summary>
     private Event()
     {
@@ -125,7 +125,7 @@ public class Event
     {
         if (totalSeats <= 0)
         {
-            throw new ValidationException("Количество мест на событии должно быть больше нуля.");
+            throw new InvalidTotalSeatsException("Количество мест на событии должно быть больше нуля.");
         }
     }
 }

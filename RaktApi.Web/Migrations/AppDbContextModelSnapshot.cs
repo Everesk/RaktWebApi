@@ -22,7 +22,7 @@ namespace RaktWebApi.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("RaktWebApi.Models.Booking", b =>
+            modelBuilder.Entity("RaktApi.Domain.Booking", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
@@ -54,7 +54,7 @@ namespace RaktWebApi.Migrations
                     b.ToTable("bookings", (string)null);
                 });
 
-            modelBuilder.Entity("RaktWebApi.Models.Event", b =>
+            modelBuilder.Entity("RaktApi.Domain.Event", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
@@ -93,9 +93,9 @@ namespace RaktWebApi.Migrations
                     b.ToTable("events", (string)null);
                 });
 
-            modelBuilder.Entity("RaktWebApi.Models.Booking", b =>
+            modelBuilder.Entity("RaktApi.Domain.Booking", b =>
                 {
-                    b.HasOne("RaktWebApi.Models.Event", "Event")
+                    b.HasOne("RaktApi.Domain.Event", "Event")
                         .WithMany("Bookings")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -105,7 +105,7 @@ namespace RaktWebApi.Migrations
                     b.Navigation("Event");
                 });
 
-            modelBuilder.Entity("RaktWebApi.Models.Event", b =>
+            modelBuilder.Entity("RaktApi.Domain.Event", b =>
                 {
                     b.Navigation("Bookings");
                 });

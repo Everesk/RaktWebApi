@@ -1,5 +1,5 @@
-using RaktWebApi.Common.Exceptions;
-using RaktWebApi.Models;
+using RaktApi.Domain;
+using RaktApi.Domain.Exceptions;
 using RaktWebApi.Repositories;
 
 namespace RaktWebApi.Services;

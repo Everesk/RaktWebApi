@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using RaktWebApi.Models;
+using RaktApi.Domain;
 using RaktWebApi.Repositories;
 
 namespace RaktWebApi.Services;

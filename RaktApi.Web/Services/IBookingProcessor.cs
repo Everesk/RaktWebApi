@@ -1,4 +1,4 @@
-using RaktWebApi.Models;
+using RaktApi.Domain;
 
 namespace RaktWebApi.Services;
 

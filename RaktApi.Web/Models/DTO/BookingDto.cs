@@ -1,3 +1,5 @@
+using RaktApi.Domain;
+
 namespace RaktWebApi.Models.DTO;
 
 /// <summary>

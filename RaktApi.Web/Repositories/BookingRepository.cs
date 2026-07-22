@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using RaktWebApi.Common.Exceptions;
+using RaktApi.Domain;
+using RaktApi.Domain.Exceptions;
 using RaktWebApi.Data;
-using RaktWebApi.Models;
 
 namespace RaktWebApi.Repositories;
 

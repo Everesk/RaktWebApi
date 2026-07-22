@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using RaktWebApi.Common.Exceptions;
-using RaktWebApi.Models;
+using RaktApi.Domain;
+using RaktApi.Domain.Exceptions;
 using RaktWebApi.Models.DTO;
 using RaktWebApi.Services;
 using RaktWebApi.Repositories;
@@ -63,7 +63,7 @@ public class EventServiceTests : InMemoryDbTestBase
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void Create_ShouldThrowValidationException_WhenTotalSeatsIsNotPositive(int totalSeats)
+    public void Create_ShouldThrowInvalidTotalSeatsException_WhenTotalSeatsIsNotPositive(int totalSeats)
     {
         // Act
         Action act = () => Event.Create(
@@ -74,7 +74,7 @@ public class EventServiceTests : InMemoryDbTestBase
             totalSeats: totalSeats);
 
         // Assert
-        act.Should().Throw<ValidationException>();
+        act.Should().Throw<InvalidTotalSeatsException>();
     }
 
     /// <summary>

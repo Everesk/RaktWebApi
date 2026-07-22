@@ -1,4 +1,4 @@
-using RaktWebApi.Models;
+using RaktApi.Domain;
 using RaktWebApi.Models.DTO;
 
 namespace RaktWebApi.Mappers;

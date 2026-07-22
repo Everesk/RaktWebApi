@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using RaktWebApi.Models;
+using RaktApi.Domain;
 using RaktWebApi.Options;
 using RaktWebApi.Repositories;
 

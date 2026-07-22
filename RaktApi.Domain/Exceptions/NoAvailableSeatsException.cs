@@ -1,4 +1,4 @@
-namespace RaktWebApi.Common.Exceptions;
+namespace RaktApi.Domain.Exceptions;
 
 /// <summary>
 /// Исключение для ситуаций, когда на событие больше нет свободных мест.

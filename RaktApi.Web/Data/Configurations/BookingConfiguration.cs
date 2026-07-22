@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using RaktWebApi.Models;
+using RaktApi.Domain;
 
 namespace RaktWebApi.Data.Configurations;
 

@@ -1,4 +1,4 @@
-namespace RaktWebApi.Models;
+namespace RaktApi.Domain;
 
 /// <summary>
 /// Представляет бронирование события.
@@ -45,7 +45,7 @@ public class Booking
     }
 
     /// <summary>
-    /// Приватный конструктор для EF Core.
+    /// Приватный конструктор для материализации сущности.
     /// </summary>
     private Booking()
     {

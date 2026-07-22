@@ -1,5 +1,5 @@
 using FluentAssertions;
-using RaktWebApi.Models;
+using RaktApi.Domain;
 
 namespace Rakt.Tests.Models;
 

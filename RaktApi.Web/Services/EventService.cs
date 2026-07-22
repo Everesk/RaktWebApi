@@ -1,4 +1,5 @@
-using RaktWebApi.Common.Exceptions;
+using RaktApi.Domain;
+using RaktApi.Domain.Exceptions;
 using RaktWebApi.Mappers;
 using RaktWebApi.Models;
 using RaktWebApi.Models.DTO;

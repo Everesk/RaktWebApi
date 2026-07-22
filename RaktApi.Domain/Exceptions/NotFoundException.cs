@@ -1,4 +1,4 @@
-﻿namespace RaktWebApi.Common.Exceptions;
+namespace RaktApi.Domain.Exceptions;
 
 /// <summary>
 /// Исключение для ситуаций, когда запрошенный ресурс не найден.

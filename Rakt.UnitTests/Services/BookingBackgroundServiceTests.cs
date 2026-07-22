@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using RaktWebApi.Data.Interceptors;
 using RaktWebApi.Data;
-using RaktWebApi.Models;
+using RaktApi.Domain;
 using RaktWebApi.Options;
 using RaktWebApi.Services;
 using RaktWebApi.Repositories;

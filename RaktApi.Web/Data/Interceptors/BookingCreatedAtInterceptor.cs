@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using RaktWebApi.Models;
+using RaktApi.Domain;
 
 namespace RaktWebApi.Data.Interceptors;
 
