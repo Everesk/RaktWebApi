@@ -3,7 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.37111.16
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaktWebApi", "RaktWebApi\RaktWebApi.csproj", "{C15C65A1-3D5D-12A3-38E1-1D325473FE0E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaktApi.Web", "RaktApi.Web\RaktApi.Web.csproj", "{C15C65A1-3D5D-12A3-38E1-1D325473FE0E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaktApi.Domain", "RaktApi.Domain\RaktApi.Domain.csproj", "{12EAFA96-6BA7-48C5-B8D9-ED4BB41A3C6B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaktApi.Application", "RaktApi.Application\RaktApi.Application.csproj", "{65F8E914-B1D7-4A2A-9BC1-61A77CA84CBA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaktApi.Infrastracture", "RaktApi.Infrastracture\RaktApi.Infrastracture.csproj", "{E81B7DB7-2B1E-4460-A13C-445F5FA47125}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rakt.UnitTests", "Rakt.UnitTests\Rakt.UnitTests.csproj", "{0CBFBCC9-4BDA-4512-8B9C-193872A3786C}"
 EndProject
@@ -19,6 +25,18 @@ Global
 		{C15C65A1-3D5D-12A3-38E1-1D325473FE0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C15C65A1-3D5D-12A3-38E1-1D325473FE0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C15C65A1-3D5D-12A3-38E1-1D325473FE0E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12EAFA96-6BA7-48C5-B8D9-ED4BB41A3C6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12EAFA96-6BA7-48C5-B8D9-ED4BB41A3C6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12EAFA96-6BA7-48C5-B8D9-ED4BB41A3C6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12EAFA96-6BA7-48C5-B8D9-ED4BB41A3C6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{65F8E914-B1D7-4A2A-9BC1-61A77CA84CBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65F8E914-B1D7-4A2A-9BC1-61A77CA84CBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65F8E914-B1D7-4A2A-9BC1-61A77CA84CBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65F8E914-B1D7-4A2A-9BC1-61A77CA84CBA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E81B7DB7-2B1E-4460-A13C-445F5FA47125}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E81B7DB7-2B1E-4460-A13C-445F5FA47125}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E81B7DB7-2B1E-4460-A13C-445F5FA47125}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E81B7DB7-2B1E-4460-A13C-445F5FA47125}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0CBFBCC9-4BDA-4512-8B9C-193872A3786C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0CBFBCC9-4BDA-4512-8B9C-193872A3786C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0CBFBCC9-4BDA-4512-8B9C-193872A3786C}.Release|Any CPU.ActiveCfg = Release|Any CPU

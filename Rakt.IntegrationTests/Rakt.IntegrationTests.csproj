@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RaktWebApi\RaktWebApi.csproj" />
+    <ProjectReference Include="..\RaktApi.Web\RaktApi.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>
