@@ -45,6 +45,13 @@ public class Booking
     }
 
     /// <summary>
+    /// Создаёт новое бронирование для указанного события.
+    /// </summary>
+    /// <param name="eventId">Идентификатор события.</param>
+    /// <returns>Новое бронирование в статусе ожидания обработки.</returns>
+    public static Booking Create(Guid eventId) => new(eventId);
+
+    /// <summary>
     /// Приватный конструктор для материализации сущности.
     /// </summary>
     private Booking()

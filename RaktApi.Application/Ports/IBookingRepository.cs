@@ -7,8 +7,8 @@ namespace RaktApi.Application.Ports;
 /// </summary>
 public interface IBookingRepository
 {
-    /// <summary>Создает бронирование и резервирует место для события.</summary>
-    Task<Booking> CreateForEventAsync(Guid eventId, CancellationToken cancellationToken = default);
+    /// <summary>Добавляет бронирование и сохраняет изменения.</summary>
+    Task AddAsync(Booking booking, CancellationToken cancellationToken = default);
 
     /// <summary>Возвращает бронирование по идентификатору без отслеживания изменений.</summary>
     Task<Booking?> GetByIdAsync(Guid bookingId, CancellationToken cancellationToken = default);

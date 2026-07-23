@@ -28,6 +28,7 @@ public class BookingServiceTests : InMemoryDbTestBase
     {
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IEventRepository, EventRepository>();
     }
 
     /// <summary>

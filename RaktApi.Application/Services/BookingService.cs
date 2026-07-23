@@ -9,15 +9,20 @@ namespace RaktApi.Application.Services;
 /// </summary>
 public sealed class BookingService : IBookingService
 {
+    // Синхронизирует создание бронирований внутри экземпляра приложения.
+    private static readonly SemaphoreSlim BookingSemaphore = new(1, 1);
     private readonly IBookingRepository _bookingRepository;
+    private readonly IEventRepository _eventRepository;
 
     /// <summary>
     /// Создает сервис бронирований.
     /// </summary>
     /// <param name="bookingRepository">Репозиторий бронирований.</param>
-    public BookingService(IBookingRepository bookingRepository)
+    /// <param name="eventRepository">Репозиторий событий.</param>
+    public BookingService(IBookingRepository bookingRepository, IEventRepository eventRepository)
     {
         _bookingRepository = bookingRepository;
+        _eventRepository = eventRepository;
     }
 
     /// <summary>
@@ -27,7 +32,25 @@ public sealed class BookingService : IBookingService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return await _bookingRepository.CreateForEventAsync(eventId, cancellationToken);
+        await BookingSemaphore.WaitAsync(cancellationToken);
+        try
+        {
+            var eventEntity = await _eventRepository.GetForUpdateAsync(eventId, cancellationToken)
+                ?? throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
+
+            if (!eventEntity.TryReserveSeats())
+            {
+                throw new NoAvailableSeatsException("Мест нет, уйдите");
+            }
+
+            var booking = Booking.Create(eventId);
+            await _bookingRepository.AddAsync(booking, cancellationToken);
+            return booking;
+        }
+        finally
+        {
+            BookingSemaphore.Release();
+        }
     }
 
     /// <summary>
@@ -49,6 +72,9 @@ public sealed class BookingService : IBookingService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return await _bookingRepository.GetByEventIdAsync(eventId, cancellationToken);
+        var eventEntity = await _eventRepository.GetByIdAsync(eventId, cancellationToken)
+            ?? throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
+
+        return await _bookingRepository.GetByEventIdAsync(eventEntity.Id, cancellationToken);
     }
 }

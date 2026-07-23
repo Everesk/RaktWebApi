@@ -24,6 +24,7 @@ public class BookingProcessorTests : InMemoryDbTestBase
     {
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IEventRepository, EventRepository>();
         services.AddSingleton<IBookingProcessor, BookingProcessor>();
         services.AddLogging();
     }

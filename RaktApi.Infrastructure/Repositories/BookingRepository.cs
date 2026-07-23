@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RaktApi.Application.Ports;
 using RaktApi.Domain;
-using RaktApi.Domain.Exceptions;
 using RaktApi.Infrastructure.Data;
 
 namespace RaktApi.Infrastructure.Repositories;
@@ -11,32 +10,11 @@ namespace RaktApi.Infrastructure.Repositories;
 /// </summary>
 public sealed class BookingRepository(AppDbContext context) : IBookingRepository
 {
-    // Синхронизирует операции резервирования мест внутри экземпляра приложения.
-    private static readonly SemaphoreSlim BookingSemaphore = new(1, 1);
-
     /// <inheritdoc />
-    public async Task<Booking> CreateForEventAsync(Guid eventId, CancellationToken cancellationToken = default)
+    public async Task AddAsync(Booking booking, CancellationToken cancellationToken = default)
     {
-        await BookingSemaphore.WaitAsync(cancellationToken);
-        try
-        {
-            var eventEntity = await context.Events.FirstOrDefaultAsync(eventItem => eventItem.Id == eventId, cancellationToken)
-                ?? throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
-
-            if (!eventEntity.TryReserveSeats())
-            {
-                throw new NoAvailableSeatsException("Мест нет, уйдите");
-            }
-
-            var booking = new Booking(eventId);
-            await context.Bookings.AddAsync(booking, cancellationToken);
-            await context.SaveChangesAsync(cancellationToken);
-            return booking;
-        }
-        finally
-        {
-            BookingSemaphore.Release();
-        }
+        await context.Bookings.AddAsync(booking, cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     /// <inheritdoc />
@@ -46,12 +24,6 @@ public sealed class BookingRepository(AppDbContext context) : IBookingRepository
     /// <inheritdoc />
     public async Task<IReadOnlyCollection<Booking>> GetByEventIdAsync(Guid eventId, CancellationToken cancellationToken = default)
     {
-        var eventExists = await context.Events.AsNoTracking().AnyAsync(eventItem => eventItem.Id == eventId, cancellationToken);
-        if (!eventExists)
-        {
-            throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
-        }
-
         return await context.Bookings.AsNoTracking()
             .Where(booking => booking.EventId == eventId)
             .ToListAsync(cancellationToken);

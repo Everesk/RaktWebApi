@@ -1,5 +1,4 @@
 using RaktApi.Domain;
-using RaktApi.Domain.Exceptions;
 using RaktApi.Application.Ports;
 using RaktApi.Infrastructure.Repositories;
 
@@ -12,85 +11,19 @@ namespace Rakt.IntegrationTests;
 [Trait("Category", "Integration")]
 public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreSqlTestBase(fixture)
 {
-    // Количество мест в сценарии конкурентного бронирования.
-    private const int ConcurrentBookingTotalSeats = 5;
-
-    // Количество одновременно поступающих запросов на бронирование.
-    private const int ConcurrentBookingRequestsCount = 20;
-
-    /// <summary>Проверяет создание бронирования и атомарное уменьшение доступных мест.</summary>
+    /// <summary>Проверяет сохранение нового бронирования.</summary>
     [Fact]
-    public async Task CreateForEventAsync_CreatesBookingAndReservesSeat()
+    public async Task AddAsync_PersistsBooking()
     {
         await using var repositories = CreateRepositories();
         var eventEntity = await AddEventAsync(repositories, totalSeats: 2);
 
-        var booking = await repositories.Bookings.CreateForEventAsync(eventEntity.Id);
-        var storedEvent = await repositories.Events.GetByIdAsync(eventEntity.Id);
+        var booking = await AddBookingAsync(repositories, eventEntity.Id);
+        var storedBooking = await repositories.Bookings.GetByIdAsync(booking.Id);
 
         Assert.Equal(eventEntity.Id, booking.EventId);
         Assert.Equal(BookingStatus.Pending, booking.Status);
-        Assert.Equal(1, storedEvent!.AvailableSeats);
-    }
-
-    /// <summary>Проверяет ошибку при создании брони для отсутствующего события.</summary>
-    [Fact]
-    public async Task CreateForEventAsync_WhenEventDoesNotExist_ThrowsNotFoundException()
-    {
-        await using var repositories = CreateRepositories();
-
-        await Assert.ThrowsAsync<NotFoundException>(() => repositories.Bookings.CreateForEventAsync(Guid.NewGuid()));
-    }
-
-    /// <summary>Проверяет ошибку при отсутствии свободных мест.</summary>
-    [Fact]
-    public async Task CreateForEventAsync_WhenNoSeatsAvailable_ThrowsNoAvailableSeatsException()
-    {
-        await using var repositories = CreateRepositories();
-        var eventEntity = await AddEventAsync(repositories, totalSeats: 1);
-        await repositories.Bookings.CreateForEventAsync(eventEntity.Id);
-
-        await Assert.ThrowsAsync<NoAvailableSeatsException>(() => repositories.Bookings.CreateForEventAsync(eventEntity.Id));
-    }
-
-    /// <summary>Проверяет атомарность конкурентного бронирования при ограниченном числе мест.</summary>
-    [Fact]
-    public async Task CreateForEventAsync_WhenRequestsAreConcurrent_CreatesBookingsOnlyForAvailableSeats()
-    {
-        await using var repositories = CreateRepositories();
-        var eventEntity = await AddEventAsync(repositories, totalSeats: ConcurrentBookingTotalSeats);
-        var startGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var attempts = Enumerable.Range(0, ConcurrentBookingRequestsCount).Select(async _ =>
-        {
-            await startGate.Task;
-            await using var context = Fixture.CreateDbContext();
-            var repository = new BookingRepository(context);
-
-            try
-            {
-                await repository.CreateForEventAsync(eventEntity.Id);
-                return true;
-            }
-            catch (NoAvailableSeatsException)
-            {
-                return false;
-            }
-        });
-
-        startGate.SetResult();
-        var results = await Task.WhenAll(attempts);
-
-        await using var verificationContext = Fixture.CreateDbContext();
-        var verificationRepository = new BookingRepository(verificationContext);
-        var bookings = await verificationRepository.GetByEventIdAsync(eventEntity.Id);
-        var storedEvent = await repositories.Events.GetByIdAsync(eventEntity.Id);
-
-        Assert.Equal(ConcurrentBookingTotalSeats, results.Count(result => result));
-        Assert.Equal(ConcurrentBookingRequestsCount - ConcurrentBookingTotalSeats, results.Count(result => !result));
-        Assert.Equal(ConcurrentBookingTotalSeats, bookings.Count);
-        Assert.All(bookings, booking => Assert.Equal(BookingStatus.Pending, booking.Status));
-        Assert.Equal(0, storedEvent!.AvailableSeats);
+        Assert.NotNull(storedBooking);
     }
 
     /// <summary>Проверяет получение существующей брони и отсутствие результата для неизвестного идентификатора.</summary>
@@ -99,7 +32,7 @@ public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreS
     {
         await using var repositories = CreateRepositories();
         var eventEntity = await AddEventAsync(repositories, totalSeats: 1);
-        var booking = await repositories.Bookings.CreateForEventAsync(eventEntity.Id);
+        var booking = await AddBookingAsync(repositories, eventEntity.Id);
 
         var storedBooking = await repositories.Bookings.GetByIdAsync(booking.Id);
         var missingBooking = await repositories.Bookings.GetByIdAsync(Guid.NewGuid());
@@ -116,8 +49,8 @@ public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreS
         await using var repositories = CreateRepositories();
         var firstEvent = await AddEventAsync(repositories, totalSeats: 2, title: "Первое");
         var secondEvent = await AddEventAsync(repositories, totalSeats: 1, title: "Второе");
-        var firstBooking = await repositories.Bookings.CreateForEventAsync(firstEvent.Id);
-        await repositories.Bookings.CreateForEventAsync(secondEvent.Id);
+        var firstBooking = await AddBookingAsync(repositories, firstEvent.Id);
+        await AddBookingAsync(repositories, secondEvent.Id);
 
         var bookings = await repositories.Bookings.GetByEventIdAsync(firstEvent.Id);
 
@@ -125,13 +58,15 @@ public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreS
         Assert.Equal(firstBooking.Id, bookings.Single().Id);
     }
 
-    /// <summary>Проверяет ошибку при выборке броней отсутствующего события.</summary>
+    /// <summary>Проверяет пустой результат при выборке броней отсутствующего события.</summary>
     [Fact]
-    public async Task GetByEventIdAsync_WhenEventDoesNotExist_ThrowsNotFoundException()
+    public async Task GetByEventIdAsync_WhenEventDoesNotExist_ReturnsEmptyCollection()
     {
         await using var repositories = CreateRepositories();
 
-        await Assert.ThrowsAsync<NotFoundException>(() => repositories.Bookings.GetByEventIdAsync(Guid.NewGuid()));
+        var bookings = await repositories.Bookings.GetByEventIdAsync(Guid.NewGuid());
+
+        Assert.Empty(bookings);
     }
 
     /// <summary>Проверяет выборку идентификаторов только ожидающих обработки броней.</summary>
@@ -140,8 +75,8 @@ public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreS
     {
         await using var repositories = CreateRepositories();
         var eventEntity = await AddEventAsync(repositories, totalSeats: 3);
-        var pendingBooking = await repositories.Bookings.CreateForEventAsync(eventEntity.Id);
-        var confirmedBooking = await repositories.Bookings.CreateForEventAsync(eventEntity.Id);
+        var pendingBooking = await AddBookingAsync(repositories, eventEntity.Id);
+        var confirmedBooking = await AddBookingAsync(repositories, eventEntity.Id);
         await repositories.Bookings.ConfirmAsync(confirmedBooking.Id);
 
         var pendingIds = await repositories.Bookings.GetPendingIdsAsync();
@@ -155,7 +90,7 @@ public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreS
     {
         await using var repositories = CreateRepositories();
         var eventEntity = await AddEventAsync(repositories, totalSeats: 1);
-        var booking = await repositories.Bookings.CreateForEventAsync(eventEntity.Id);
+        var booking = await AddBookingAsync(repositories, eventEntity.Id);
 
         var result = await repositories.Bookings.ConfirmAsync(booking.Id);
         var storedBooking = await repositories.Bookings.GetByIdAsync(booking.Id);
@@ -182,7 +117,8 @@ public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreS
     {
         await using var repositories = CreateRepositories();
         var eventEntity = await AddEventAsync(repositories, totalSeats: 1);
-        var booking = await repositories.Bookings.CreateForEventAsync(eventEntity.Id);
+        eventEntity.TryReserveSeats();
+        var booking = await AddBookingAsync(repositories, eventEntity.Id);
 
         var result = await repositories.Bookings.TryRejectAsync(booking.Id);
         var storedBooking = await repositories.Bookings.GetByIdAsync(booking.Id);
@@ -199,7 +135,7 @@ public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreS
     {
         await using var repositories = CreateRepositories();
         var eventEntity = await AddEventAsync(repositories, totalSeats: 1);
-        var booking = await repositories.Bookings.CreateForEventAsync(eventEntity.Id);
+        var booking = await AddBookingAsync(repositories, eventEntity.Id);
         await repositories.Bookings.ConfirmAsync(booking.Id);
 
         Assert.True(await repositories.Bookings.TryRejectAsync(booking.Id));
@@ -217,5 +153,13 @@ public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreS
             totalSeats);
         await repositories.Events.AddAsync(eventEntity);
         return eventEntity;
+    }
+
+    /// <summary>Создаёт и сохраняет бронирование для подготовки сценария репозитория.</summary>
+    private static async Task<Booking> AddBookingAsync(RepositoryScope repositories, Guid eventId)
+    {
+        var booking = Booking.Create(eventId);
+        await repositories.Bookings.AddAsync(booking);
+        return booking;
     }
 }
