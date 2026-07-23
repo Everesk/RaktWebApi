@@ -5,11 +5,11 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using RaktApi.Infrastracture.Data;
+using RaktApi.Infrastructure.Data;
 
 #nullable disable
 
-namespace RaktApi.Infrastracture.Migrations
+namespace RaktApi.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20260721142039_InitialCreate")]

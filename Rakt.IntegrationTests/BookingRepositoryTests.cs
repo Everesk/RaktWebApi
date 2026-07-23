@@ -1,7 +1,7 @@
 using RaktApi.Domain;
 using RaktApi.Domain.Exceptions;
 using RaktApi.Application.Ports;
-using RaktApi.Infrastracture.Repositories;
+using RaktApi.Infrastructure.Repositories;
 
 namespace Rakt.IntegrationTests;
 

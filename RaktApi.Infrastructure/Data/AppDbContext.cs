@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RaktApi.Domain;
 
-namespace RaktApi.Infrastracture.Data;
+namespace RaktApi.Infrastructure.Data;
 
 /// <summary>
 /// Контекст базы данных приложения.

@@ -1,5 +1,5 @@
-using RaktApi.Infrastracture.Data;
-using RaktApi.Infrastracture.Repositories;
+using RaktApi.Infrastructure.Data;
+using RaktApi.Infrastructure.Repositories;
 
 namespace Rakt.IntegrationTests;
 

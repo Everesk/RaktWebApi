@@ -3,9 +3,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RaktApi.Application.Services;
-using RaktApi.Infrastracture.Options;
+using RaktApi.Infrastructure.Options;
 
-namespace RaktApi.Infrastracture.BackgroundServices;
+namespace RaktApi.Infrastructure.BackgroundServices;
 
 /// <summary>
 /// Адаптер hosting-среды, который периодически запускает use case обработки бронирований.

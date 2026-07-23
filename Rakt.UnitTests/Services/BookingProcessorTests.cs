@@ -1,12 +1,12 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using RaktApi.Infrastracture.Data.Interceptors;
-using RaktApi.Infrastracture.Data;
+using RaktApi.Infrastructure.Data.Interceptors;
+using RaktApi.Infrastructure.Data;
 using RaktApi.Domain;
 using RaktApi.Application.Ports;
 using RaktApi.Application.Services;
-using RaktApi.Infrastracture.Repositories;
+using RaktApi.Infrastructure.Repositories;
 using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;

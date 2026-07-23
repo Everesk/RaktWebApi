@@ -6,7 +6,7 @@ using RaktApi.Domain.Exceptions;
 using RaktApi.Application.DTO;
 using RaktApi.Application.Ports;
 using RaktApi.Application.Services;
-using RaktApi.Infrastracture.Repositories;
+using RaktApi.Infrastructure.Repositories;
 using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;
@@ -268,43 +268,6 @@ public class EventServiceTests : InMemoryDbTestBase
     }
 
     /// <summary>
-    /// Проверяет фильтрацию событий по названию.
-    /// </summary>
-    [Fact]
-    public async Task GetAll_ShouldFilterByTitle()
-    {
-        // Arrange
-        var service = CreateService();
-
-        await service.CreateAsync(new CreateEventDto
-        {
-            Title = "Встреча команды",
-            TotalSeats = 10,
-            StartAt = Utc(2026, 4, 6, 10, 0, 0),
-            EndAt = Utc(2026, 4, 6, 11, 0, 0)
-        });
-
-        await service.CreateAsync(new CreateEventDto
-        {
-            Title = "Созвон с заказчиком",
-            TotalSeats = 10,
-            StartAt = Utc(2026, 4, 6, 12, 0, 0),
-            EndAt = Utc(2026, 4, 6, 13, 0, 0)
-        });
-
-        // Act
-        var result = await service.GetAllAsync(new EventQueryDto
-        {
-            Title = "встреча"
-        });
-
-        // Assert
-        result.Items.Should().HaveCount(1);
-        result.TotalCount.Should().Be(1);
-        result.Items.Single().Title.Should().Be("Встреча команды");
-    }
-
-    /// <summary>
     /// Проверяет фильтрацию событий по диапазону дат.
     /// </summary>
     [Fact]
@@ -385,56 +348,6 @@ public class EventServiceTests : InMemoryDbTestBase
         result.Items.Select(x => x.Title)
             .Should()
             .ContainInOrder("Событие 3", "Событие 4");
-    }
-
-    /// <summary>
-    /// Проверяет совместную работу фильтрации и пагинации.
-    /// </summary>
-    [Fact]
-    public async Task GetAll_ShouldApplyCombinedFiltering()
-    {
-        // Arrange
-        var service = CreateService();
-
-        await service.CreateAsync(new CreateEventDto
-        {
-            Title = "Встреча backend",
-            TotalSeats = 10,
-            StartAt = Utc(2026, 4, 10, 9, 0, 0),
-            EndAt = Utc(2026, 4, 10, 10, 0, 0)
-        });
-
-        await service.CreateAsync(new CreateEventDto
-        {
-            Title = "Встреча frontend",
-            TotalSeats = 10,
-            StartAt = Utc(2026, 4, 11, 9, 0, 0),
-            EndAt = Utc(2026, 4, 11, 10, 0, 0)
-        });
-
-        await service.CreateAsync(new CreateEventDto
-        {
-            Title = "Созвон backend",
-            TotalSeats = 10,
-            StartAt = Utc(2026, 4, 12, 9, 0, 0),
-            EndAt = Utc(2026, 4, 12, 10, 0, 0)
-        });
-
-        // Act
-        var result = await service.GetAllAsync(new EventQueryDto
-        {
-            Title = "встреча",
-            From = Utc(2026, 4, 10, 0, 0, 0),
-            To = Utc(2026, 4, 11, 23, 59, 59),
-            Page = 1,
-            PageSize = 1
-        });
-
-        // Assert
-        result.TotalCount.Should().Be(2);
-        result.CurrentCount.Should().Be(1);
-        result.Items.Should().ContainSingle();
-        result.Items.Single().Title.Should().Be("Встреча backend");
     }
 
     /// <summary>

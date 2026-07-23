@@ -67,7 +67,7 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
 - use case фоновой обработки ожидающих бронирований;
 - `AddApplication()` для регистрации application-сервисов в DI.
 
-### RaktApi.Infrastracture
+### RaktApi.Infrastructure
 
 Зависит от Application и Domain и содержит интеграции с внешними технологиями.
 
@@ -144,13 +144,13 @@ docker compose down
 Создать миграцию из корня репозитория. Миграции и `DbContext` находятся в Infrastructure, а startup-проектом остаётся Web:
 
 ```bash
-dotnet ef migrations add <MigrationName> --project RaktApi.Infrastracture/RaktApi.Infrastracture.csproj --startup-project RaktApi.Web/RaktApi.Web.csproj --context AppDbContext --output-dir Migrations
+dotnet ef migrations add <MigrationName> --project RaktApi.Infrastructure/RaktApi.Infrastructure.csproj --startup-project RaktApi.Web/RaktApi.Web.csproj --context AppDbContext --output-dir Migrations
 ```
 
 Применить миграции вручную:
 
 ```bash
-dotnet ef database update --project RaktApi.Infrastracture/RaktApi.Infrastracture.csproj --startup-project RaktApi.Web/RaktApi.Web.csproj --context AppDbContext
+dotnet ef database update --project RaktApi.Infrastructure/RaktApi.Infrastructure.csproj --startup-project RaktApi.Web/RaktApi.Web.csproj --context AppDbContext
 ```
 
 Перейти в папку проекта:

@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RaktApi.Domain;
 
-namespace RaktApi.Infrastracture.Data.Configurations;
+namespace RaktApi.Infrastructure.Data.Configurations;
 
 /// <summary>
 /// Конфигурация сущности бронирования.

@@ -1,6 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
 using RaktWebApi.Common.Helpers;
 using RaktWebApi.Common.Middleware;
-using RaktApi.Infrastructure.Extensions;
+using RaktWebApi.Data;
 using Serilog;
 
 namespace RaktWebApi.Extensions;
@@ -15,7 +16,7 @@ public static class WebApplicationExtensions
     /// </summary>
     public static WebApplication UseStandardConfiguration(this WebApplication app)
     {
-        app.ApplyDatabaseMigrations();
+        app.EnsureDatabaseCreated();
 
         // Serilog-логирование HTTP-запросов.
         app.UseSerilogRequestLogging();
@@ -47,21 +48,13 @@ public static class WebApplicationExtensions
     }
 
     /// <summary>
-    /// Применяет все непримененные миграции к базе данных приложения.
+    /// Создает базу данных и таблицы при первом запуске приложения.
     /// </summary>
     /// <param name="app">Экземпляр веб-приложения.</param>
-    private static void ApplyDatabaseMigrations(this WebApplication app)
+    private static void EnsureDatabaseCreated(this WebApplication app)
     {
-        try
-        {
-            app.Services.ApplyInfrastructureMigrations();
-            Log.Information("Миграции базы данных успешно применены");
-        }
-        catch (Exception exception)
-        {
-            Log.Error(exception, "Не удалось применить миграции базы данных");
-            throw;
-        }
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.EnsureCreated();
     }
-
 }

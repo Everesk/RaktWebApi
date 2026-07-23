@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaktApi.Domain", "RaktApi.D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaktApi.Application", "RaktApi.Application\RaktApi.Application.csproj", "{65F8E914-B1D7-4A2A-9BC1-61A77CA84CBA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaktApi.Infrastracture", "RaktApi.Infrastracture\RaktApi.Infrastracture.csproj", "{E81B7DB7-2B1E-4460-A13C-445F5FA47125}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaktApi.Infrastructure", "RaktApi.Infrastructure\RaktApi.Infrastructure.csproj", "{E81B7DB7-2B1E-4460-A13C-445F5FA47125}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rakt.UnitTests", "Rakt.UnitTests\Rakt.UnitTests.csproj", "{0CBFBCC9-4BDA-4512-8B9C-193872A3786C}"
 EndProject

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace RaktApi.Infrastracture.Options;
+namespace RaktApi.Infrastructure.Options;
 
 /// <summary>
 /// Настройки фоновой обработки бронирований.

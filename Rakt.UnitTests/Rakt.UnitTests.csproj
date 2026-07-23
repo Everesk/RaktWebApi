@@ -27,7 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RaktApi.Application\RaktApi.Application.csproj" />
-    <ProjectReference Include="..\RaktApi.Infrastracture\RaktApi.Infrastracture.csproj" />
+    <ProjectReference Include="..\RaktApi.Infrastructure\RaktApi.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using RaktApi.Infrastracture.Data;
+using RaktApi.Infrastructure.Data;
 using Testcontainers.PostgreSql;
 
 namespace Rakt.IntegrationTests;

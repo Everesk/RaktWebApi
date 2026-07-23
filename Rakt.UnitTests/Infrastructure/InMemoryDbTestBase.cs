@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using RaktApi.Infrastracture.Data;
+using RaktApi.Infrastructure.Data;
 using RaktApi.Domain;
 
 namespace Rakt.Tests.Infrastructure;

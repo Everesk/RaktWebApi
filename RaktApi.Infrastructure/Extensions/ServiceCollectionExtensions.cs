@@ -2,13 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RaktApi.Application.Ports;
-using RaktApi.Infrastracture.Data;
-using RaktApi.Infrastracture.Data.Interceptors;
-using RaktApi.Infrastracture.BackgroundServices;
-using RaktApi.Infrastracture.Options;
-using RaktApi.Infrastracture.Repositories;
+using RaktApi.Infrastructure.Data;
+using RaktApi.Infrastructure.Data.Interceptors;
+using RaktApi.Infrastructure.BackgroundServices;
+using RaktApi.Infrastructure.Options;
+using RaktApi.Infrastructure.Repositories;
 
-namespace RaktApi.Infrastracture.Extensions;
+namespace RaktApi.Infrastructure.Extensions;
 
 /// <summary>
 /// Методы расширения для регистрации зависимостей инфраструктурного слоя.
