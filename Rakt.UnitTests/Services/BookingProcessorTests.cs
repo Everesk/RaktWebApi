@@ -1,11 +1,12 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using RaktWebApi.Data.Interceptors;
-using RaktWebApi.Data;
-using RaktWebApi.Models;
-using RaktWebApi.Services;
-using RaktWebApi.Repositories;
+using RaktApi.Infrastructure.Data.Interceptors;
+using RaktApi.Infrastructure.Data;
+using RaktApi.Domain;
+using RaktApi.Application.Ports;
+using RaktApi.Application.Services;
+using RaktApi.Infrastructure.Repositories;
 using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;
@@ -23,6 +24,7 @@ public class BookingProcessorTests : InMemoryDbTestBase
     {
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IEventRepository, EventRepository>();
         services.AddSingleton<IBookingProcessor, BookingProcessor>();
         services.AddLogging();
     }

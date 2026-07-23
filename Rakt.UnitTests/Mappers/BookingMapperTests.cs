@@ -1,6 +1,6 @@
 using FluentAssertions;
-using RaktWebApi.Mappers;
-using RaktWebApi.Models;
+using RaktApi.Application.Mappers;
+using RaktApi.Domain;
 
 namespace Rakt.Tests.Mappers;
 

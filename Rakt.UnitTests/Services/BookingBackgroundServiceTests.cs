@@ -3,12 +3,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using RaktWebApi.Data.Interceptors;
-using RaktWebApi.Data;
-using RaktWebApi.Models;
-using RaktWebApi.Options;
-using RaktWebApi.Services;
-using RaktWebApi.Repositories;
+using RaktApi.Infrastructure.Data.Interceptors;
+using RaktApi.Infrastructure.Data;
+using RaktApi.Infrastructure.BackgroundServices;
+using RaktApi.Infrastructure.Options;
+using RaktApi.Domain;
+using RaktApi.Application.Ports;
+using RaktApi.Application.Services;
+using RaktApi.Infrastructure.Repositories;
 using Rakt.Tests.Infrastructure;
 
 namespace Rakt.Tests.Services;
@@ -26,7 +28,10 @@ public class BookingBackgroundServiceTests : InMemoryDbTestBase
     {
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IBookingRepository, BookingRepository>();
-        services.AddSingleton<IBookingProcessor, BookingProcessor>();
+        services.AddScoped<IEventRepository, EventRepository>();
+        services.AddScoped<IBookingProcessor, BookingProcessor>();
+        services.AddSingleton<IBookingProcessingState, BookingProcessingState>();
+        services.AddScoped<IBookingProcessingService, BookingProcessingService>();
         services.AddOptions<BookingProcessingOptions>().Configure(options => options.AttemptsLimit = 3);
         services.AddLogging();
     }
@@ -43,6 +48,29 @@ public class BookingBackgroundServiceTests : InMemoryDbTestBase
             options.UseInMemoryDatabase(DatabaseName);
             options.AddInterceptors(sp.GetRequiredService<BookingCreatedAtInterceptor>());
         });
+    }
+
+    /// <summary>
+    /// Проверяет, что счётчик неудачных попыток сохраняется между scope фонового обработчика.
+    /// </summary>
+    [Fact]
+    public void ProcessingState_ShouldPersistAttemptsBetweenScopes()
+    {
+        // Arrange
+        var bookingId = Guid.NewGuid();
+        using var firstScope = CreateScope();
+        using var secondScope = CreateScope();
+        var firstState = firstScope.ServiceProvider.GetRequiredService<IBookingProcessingState>();
+        var secondState = secondScope.ServiceProvider.GetRequiredService<IBookingProcessingState>();
+
+        // Act
+        var firstAttempt = firstState.RegisterAttempt(bookingId);
+        var secondAttempt = secondState.RegisterAttempt(bookingId);
+
+        // Assert
+        firstState.Should().BeSameAs(secondState);
+        firstAttempt.Should().Be(1);
+        secondAttempt.Should().Be(2);
     }
 
     /// <summary>

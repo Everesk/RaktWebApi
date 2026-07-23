@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+	  <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RaktApi.Application\RaktApi.Application.csproj" />
+    <ProjectReference Include="..\RaktApi.Infrastructure\RaktApi.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.6" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.1.6" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.6" />
+  </ItemGroup>
+
+</Project>

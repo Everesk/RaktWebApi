@@ -1,6 +1,6 @@
 # RaktWebApi
 
-Практикум, спринт 1–6
+Практикум, спринт 1–7
 Шундерюк Михаил
 
 ## Описание проекта
@@ -47,19 +47,44 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
 
 ## Архитектура проекта
 
-### Основной проект RaktWebApi
+Проект разделён на четыре сборки по принципам чистой архитектуры. Направление зависимостей контролируется `ProjectReference`:
 
-- Controllers - HTTP-эндпоинты
-- Models - сущности
-- `Models/DTO` - DTO для HTTP-контракта
-- Services - бизнес-логика приложения
-- Mappers - преобразование сущностей и DTO
-- Extensions - регистрация и конфигурация приложения
-- Common
-  - Exceptions - пользовательские исключения
-  - Middleware - глобальная обработка ошибок и статус-кодов
-  - Helpers - формирование ProblemDetails
-- `Data` - EF Core контекст, конфигурации и интерсепторы
+### RaktApi.Domain
+
+Не зависит от других проектов и внешних технологий.
+
+- доменные сущности `Event` и `Booking`;
+- перечисление `BookingStatus`;
+- доменные исключения и бизнес-правила.
+
+### RaktApi.Application
+
+Зависит только от Domain.
+
+- use cases и их интерфейсы;
+- DTO и мапперы;
+- интерфейсы портов репозиториев;
+- use case фоновой обработки ожидающих бронирований;
+- `AddApplication()` для регистрации application-сервисов в DI.
+
+### RaktApi.Infrastructure
+
+Зависит от Application и Domain и содержит интеграции с внешними технологиями.
+
+- EF Core `AppDbContext`, конфигурации сущностей и миграции;
+- реализации портов репозиториев для PostgreSQL;
+- EF Core-интерсепторы;
+- hosted service и настройки фонового запуска обработки бронирований;
+- `AddInfrastructure()` для регистрации инфраструктурных зависимостей и `ApplyInfrastructureMigrations()` для применения миграций.
+
+### RaktApi.Web
+
+Точка входа ASP.NET Core и Presentation-слой.
+
+- контроллеры и HTTP-маппинг;
+- middleware глобальной обработки исключений и `ProblemDetails`;
+- конфигурация HTTP-pipeline, Swagger и Serilog;
+- composition root в `Program.cs`, вызывающий `AddApplication()` и `AddInfrastructure()`.
 
 ### Тестовый проект Rakt.UnitTests
 
@@ -83,7 +108,7 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
 git clone <ссылка-на-репозиторий>
 ```
 
-Настроить строку подключения в `RaktWebApi/appsettings.json`:
+Настроить строку подключения в `RaktApi.Web/appsettings.json`:
 ```json
 {
   "ConnectionStrings": {
@@ -116,21 +141,21 @@ docker compose down
 
 Схема базы данных создаётся и обновляется миграциями EF Core. При запуске приложение применяет все неприменённые миграции через `Database.Migrate()`.
 
-Создать миграцию из корня репозитория:
+Создать миграцию из корня репозитория. Миграции и `DbContext` находятся в Infrastructure, а startup-проектом остаётся Web:
 
 ```bash
-dotnet ef migrations add <MigrationName> --project RaktWebApi/RaktWebApi.csproj --startup-project RaktWebApi/RaktWebApi.csproj
+dotnet ef migrations add <MigrationName> --project RaktApi.Infrastructure/RaktApi.Infrastructure.csproj --startup-project RaktApi.Web/RaktApi.Web.csproj --context AppDbContext --output-dir Migrations
 ```
 
 Применить миграции вручную:
 
 ```bash
-dotnet ef database update --project RaktWebApi/RaktWebApi.csproj --startup-project RaktWebApi/RaktWebApi.csproj
+dotnet ef database update --project RaktApi.Infrastructure/RaktApi.Infrastructure.csproj --startup-project RaktApi.Web/RaktApi.Web.csproj --context AppDbContext
 ```
 
 Перейти в папку проекта:
 ```
-cd RaktWebApi/RaktWebApi
+cd RaktApi.Web
 ```
 Запустить приложение:
  - Только HTTP:
