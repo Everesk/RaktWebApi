@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RaktApi.Application.Ports;
 using RaktApi.Domain;
 
@@ -9,7 +10,8 @@ namespace RaktApi.Application.Services;
 public sealed class BookingProcessingService(
     IBookingRepository bookingRepository,
     IBookingProcessor bookingProcessor,
-    IBookingProcessingState processingState) : IBookingProcessingService
+    IBookingProcessingState processingState,
+    ILogger<BookingProcessingService> logger) : IBookingProcessingService
 {
     /// <inheritdoc />
     public async Task ProcessPendingAsync(int attemptsLimit, CancellationToken cancellationToken = default)
@@ -50,9 +52,15 @@ public sealed class BookingProcessingService(
             {
                 throw;
             }
-            catch
+            catch (Exception exception)
             {
                 var attempt = processingState.RegisterAttempt(bookingId);
+                logger.LogError(
+                    exception,
+                    "Не удалось обработать бронь {BookingId}. Номер неудачной попытки: {Attempt}.",
+                    bookingId,
+                    attempt);
+
                 if (attempt >= attemptsLimit && await bookingProcessor.TryRejectAsync(booking, cancellationToken))
                 {
                     processingState.ClearAttempts(bookingId);
