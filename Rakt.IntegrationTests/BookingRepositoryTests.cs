@@ -1,5 +1,4 @@
 using RaktApi.Domain;
-using RaktApi.Application.Ports;
 using RaktApi.Infrastructure.Repositories;
 
 namespace Rakt.IntegrationTests;
@@ -69,77 +68,36 @@ public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreS
         Assert.Empty(bookings);
     }
 
-    /// <summary>Проверяет выборку идентификаторов только ожидающих обработки броней.</summary>
+    /// <summary>Проверяет выборку идентификаторов ожидающих обработки броней.</summary>
     [Fact]
     public async Task GetPendingIdsAsync_ReturnsOnlyPendingBookings()
     {
         await using var repositories = CreateRepositories();
         var eventEntity = await AddEventAsync(repositories, totalSeats: 3);
         var pendingBooking = await AddBookingAsync(repositories, eventEntity.Id);
-        var confirmedBooking = await AddBookingAsync(repositories, eventEntity.Id);
-        await repositories.Bookings.ConfirmAsync(confirmedBooking.Id);
 
         var pendingIds = await repositories.Bookings.GetPendingIdsAsync();
 
         Assert.Equal([pendingBooking.Id], pendingIds);
     }
 
-    /// <summary>Проверяет подтверждение существующей брони.</summary>
+    /// <summary>Проверяет сохранение изменений отслеживаемого бронирования.</summary>
     [Fact]
-    public async Task ConfirmAsync_WhenEventExists_ConfirmsBooking()
+    public async Task GetForUpdateAsync_AndUpdateAsync_PersistsChanges()
     {
         await using var repositories = CreateRepositories();
         var eventEntity = await AddEventAsync(repositories, totalSeats: 1);
         var booking = await AddBookingAsync(repositories, eventEntity.Id);
 
-        var result = await repositories.Bookings.ConfirmAsync(booking.Id);
+        var trackedBooking = await repositories.Bookings.GetForUpdateAsync(booking.Id);
+        Assert.NotNull(trackedBooking);
+        trackedBooking.Confirm(DateTimeOffset.UtcNow);
+        await repositories.Bookings.UpdateAsync();
+
         var storedBooking = await repositories.Bookings.GetByIdAsync(booking.Id);
 
-        Assert.Equal(BookingConfirmationResult.Confirmed, result);
         Assert.Equal(BookingStatus.Confirmed, storedBooking!.Status);
         Assert.NotNull(storedBooking.ProcessedAt);
-    }
-
-    /// <summary>Проверяет результат для отсутствующей брони при подтверждении.</summary>
-    [Fact]
-    public async Task ConfirmAsync_WhenBookingDoesNotExist_ReturnsNotFound()
-    {
-        await using var repositories = CreateRepositories();
-
-        var result = await repositories.Bookings.ConfirmAsync(Guid.NewGuid());
-
-        Assert.Equal(BookingConfirmationResult.NotFound, result);
-    }
-
-    /// <summary>Проверяет отклонение ожидающей брони и возврат места.</summary>
-    [Fact]
-    public async Task TryRejectAsync_WhenBookingIsPending_RejectsBookingAndReleasesSeat()
-    {
-        await using var repositories = CreateRepositories();
-        var eventEntity = await AddEventAsync(repositories, totalSeats: 1);
-        eventEntity.TryReserveSeats();
-        var booking = await AddBookingAsync(repositories, eventEntity.Id);
-
-        var result = await repositories.Bookings.TryRejectAsync(booking.Id);
-        var storedBooking = await repositories.Bookings.GetByIdAsync(booking.Id);
-        var storedEvent = await repositories.Events.GetByIdAsync(eventEntity.Id);
-
-        Assert.True(result);
-        Assert.Equal(BookingStatus.Rejected, storedBooking!.Status);
-        Assert.Equal(1, storedEvent!.AvailableSeats);
-    }
-
-    /// <summary>Проверяет идемпотентность отклонения завершенной или отсутствующей брони.</summary>
-    [Fact]
-    public async Task TryRejectAsync_WhenBookingIsCompletedOrMissing_ReturnsTrue()
-    {
-        await using var repositories = CreateRepositories();
-        var eventEntity = await AddEventAsync(repositories, totalSeats: 1);
-        var booking = await AddBookingAsync(repositories, eventEntity.Id);
-        await repositories.Bookings.ConfirmAsync(booking.Id);
-
-        Assert.True(await repositories.Bookings.TryRejectAsync(booking.Id));
-        Assert.True(await repositories.Bookings.TryRejectAsync(Guid.NewGuid()));
     }
 
     /// <summary>Создаёт и сохраняет событие для сценария бронирования.</summary>

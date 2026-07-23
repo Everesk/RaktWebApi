@@ -22,6 +22,10 @@ public sealed class BookingRepository(AppDbContext context) : IBookingRepository
         context.Bookings.AsNoTracking().FirstOrDefaultAsync(booking => booking.Id == bookingId, cancellationToken);
 
     /// <inheritdoc />
+    public Task<Booking?> GetForUpdateAsync(Guid bookingId, CancellationToken cancellationToken = default) =>
+        context.Bookings.FirstOrDefaultAsync(booking => booking.Id == bookingId, cancellationToken);
+
+    /// <inheritdoc />
     public async Task<IReadOnlyCollection<Booking>> GetByEventIdAsync(Guid eventId, CancellationToken cancellationToken = default)
     {
         return await context.Bookings.AsNoTracking()
@@ -37,40 +41,5 @@ public sealed class BookingRepository(AppDbContext context) : IBookingRepository
             .ToListAsync(cancellationToken);
 
     /// <inheritdoc />
-    public async Task<BookingConfirmationResult> ConfirmAsync(Guid bookingId, CancellationToken cancellationToken = default)
-    {
-        var booking = await context.Bookings.FirstOrDefaultAsync(item => item.Id == bookingId, cancellationToken);
-        if (booking is null)
-        {
-            return BookingConfirmationResult.NotFound;
-        }
-
-        var eventEntity = await context.Events.FirstOrDefaultAsync(item => item.Id == booking.EventId, cancellationToken);
-        if (eventEntity is null)
-        {
-            booking.Reject(DateTimeOffset.UtcNow);
-            await context.SaveChangesAsync(cancellationToken);
-            return BookingConfirmationResult.EventNotFound;
-        }
-
-        booking.Confirm(DateTimeOffset.UtcNow);
-        await context.SaveChangesAsync(cancellationToken);
-        return BookingConfirmationResult.Confirmed;
-    }
-
-    /// <inheritdoc />
-    public async Task<bool> TryRejectAsync(Guid bookingId, CancellationToken cancellationToken = default)
-    {
-        var booking = await context.Bookings.FirstOrDefaultAsync(item => item.Id == bookingId, cancellationToken);
-        if (booking is null || booking.Status is BookingStatus.Rejected or BookingStatus.Confirmed)
-        {
-            return true;
-        }
-
-        var eventEntity = await context.Events.FirstOrDefaultAsync(item => item.Id == booking.EventId, cancellationToken);
-        eventEntity?.ReleaseSeats();
-        booking.Reject(DateTimeOffset.UtcNow);
-        await context.SaveChangesAsync(cancellationToken);
-        return true;
-    }
+    public Task UpdateAsync(CancellationToken cancellationToken = default) => context.SaveChangesAsync(cancellationToken);
 }

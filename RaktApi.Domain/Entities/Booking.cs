@@ -61,7 +61,7 @@ public class Booking
     /// <summary>
     /// Обновляет статус бронирования и фиксирует время обработки.
     /// </summary>
-    internal void Confirm(DateTimeOffset processedAt)
+    public void Confirm(DateTimeOffset processedAt)
     {
         Status = BookingStatus.Confirmed;
         ProcessedAt = processedAt;
@@ -70,7 +70,7 @@ public class Booking
     /// <summary>
     /// Отклоняет бронирование и фиксирует время обработки.
     /// </summary>
-    internal void Reject(DateTimeOffset processedAt)
+    public void Reject(DateTimeOffset processedAt)
     {
         Status = BookingStatus.Rejected;
         ProcessedAt = processedAt;
