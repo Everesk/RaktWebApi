@@ -19,8 +19,9 @@ public sealed class EventRepository(AppDbContext context) : IEventRepository
         var eventsQuery = context.Events.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(query.Title))
         {
-            var title = query.Title.ToLower();
-            eventsQuery = eventsQuery.Where(eventEntity => eventEntity.Title.ToLower().Contains(title));
+            var pattern = $"%{EscapeLikePattern(query.Title.Trim())}%";
+            eventsQuery = eventsQuery.Where(eventEntity =>
+                EF.Functions.ILike(eventEntity.Title, pattern, "\\"));
         }
 
         if (query.From.HasValue)
@@ -77,4 +78,10 @@ public sealed class EventRepository(AppDbContext context) : IEventRepository
         context.Events.Remove(eventEntity);
         await context.SaveChangesAsync(cancellationToken);
     }
+
+    /// <summary>Экранирует специальные символы шаблона SQL LIKE.</summary>
+    private static string EscapeLikePattern(string value) => value
+        .Replace("\\", "\\\\")
+        .Replace("%", "\\%")
+        .Replace("_", "\\_");
 }

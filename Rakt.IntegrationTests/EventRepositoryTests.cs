@@ -102,10 +102,25 @@ public sealed class EventRepositoryTests(PostgreSqlFixture fixture) : PostgreSql
             CreateEvent("DotNet Meetup", 10, 11),
             CreateEvent("Java Meetup", 12, 13));
 
-        var result = await repositories.Events.GetAllAsync(new EventQueryDto { Title = "dotnet" });
+        var result = await repositories.Events.GetAllAsync(new EventQueryDto { Title = "  dotnet  " });
 
         Assert.Single(result.Items);
         Assert.Equal("DotNet Meetup", result.Items.Single().Title);
+    }
+
+    /// <summary>Проверяет буквальный поиск символов шаблона LIKE в заголовке.</summary>
+    [Fact]
+    public async Task GetAllAsync_WithLikeSpecialCharactersInTitleFilter_ReturnsLiteralMatch()
+    {
+        await using var repositories = CreateRepositories();
+        await AddEventsAsync(repositories.Events,
+            CreateEvent("Скидка 50%_акция", 10, 11),
+            CreateEvent("Скидка 50XXакция", 12, 13));
+
+        var result = await repositories.Events.GetAllAsync(new EventQueryDto { Title = "50%_" });
+
+        Assert.Single(result.Items);
+        Assert.Equal("Скидка 50%_акция", result.Items.Single().Title);
     }
 
     /// <summary>Проверяет фильтр по минимальному времени начала.</summary>
