@@ -1,6 +1,6 @@
 # RaktWebApi
 
-Практикум, спринт 1–6
+Практикум, спринт 1–7
 Шундерюк Михаил
 
 ## Описание проекта
@@ -48,15 +48,6 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
 ## Архитектура проекта
 
 Проект разделён на четыре сборки по принципам чистой архитектуры. Направление зависимостей контролируется `ProjectReference`:
-
-```text
-RaktApi.Web ───────────► RaktApi.Application ─► RaktApi.Domain
-       │
-       └───────────────► RaktApi.Infrastracture ─► RaktApi.Application
-                                                   └► RaktApi.Domain
-```
-
-`RaktApi.Application` не имеет ссылки на `RaktApi.Infrastracture`.
 
 ### RaktApi.Domain
 
