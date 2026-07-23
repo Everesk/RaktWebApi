@@ -8,12 +8,9 @@ namespace RaktApi.Application.Services;
 /// </summary>
 public sealed class BookingProcessingService(
     IBookingRepository bookingRepository,
-    IBookingProcessor bookingProcessor) : IBookingProcessingService
+    IBookingProcessor bookingProcessor,
+    IBookingProcessingState processingState) : IBookingProcessingService
 {
-    private readonly HashSet<Guid> processingBookings = [];
-    private readonly Dictionary<Guid, int> processingAttempts = [];
-    private readonly object syncRoot = new();
-
     /// <inheritdoc />
     public async Task ProcessPendingAsync(int attemptsLimit, CancellationToken cancellationToken = default)
     {
@@ -30,7 +27,7 @@ public sealed class BookingProcessingService(
     /// </summary>
     private async Task ProcessBookingAsync(Guid bookingId, int attemptsLimit, CancellationToken cancellationToken)
     {
-        if (!TryMarkProcessing(bookingId))
+        if (!processingState.TryMarkProcessing(bookingId))
         {
             return;
         }
@@ -40,14 +37,14 @@ public sealed class BookingProcessingService(
             var booking = await bookingRepository.GetByIdAsync(bookingId, cancellationToken);
             if (booking is null || booking.Status != BookingStatus.Pending)
             {
-                ClearAttempts(bookingId);
+                processingState.ClearAttempts(bookingId);
                 return;
             }
 
             try
             {
                 await bookingProcessor.ProcessAsync(booking, cancellationToken);
-                ClearAttempts(bookingId);
+                processingState.ClearAttempts(bookingId);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -55,63 +52,16 @@ public sealed class BookingProcessingService(
             }
             catch
             {
-                var attempt = RegisterAttempt(bookingId);
+                var attempt = processingState.RegisterAttempt(bookingId);
                 if (attempt >= attemptsLimit && await bookingProcessor.TryRejectAsync(booking, cancellationToken))
                 {
-                    ClearAttempts(bookingId);
+                    processingState.ClearAttempts(bookingId);
                 }
             }
         }
         finally
         {
-            UnmarkProcessing(bookingId);
-        }
-    }
-
-    /// <summary>
-    /// Помечает бронь как выполняемую, если она ещё не обрабатывается.
-    /// </summary>
-    private bool TryMarkProcessing(Guid bookingId)
-    {
-        lock (syncRoot)
-        {
-            return processingBookings.Add(bookingId);
-        }
-    }
-
-    /// <summary>
-    /// Снимает отметку о выполняемой обработке брони.
-    /// </summary>
-    private void UnmarkProcessing(Guid bookingId)
-    {
-        lock (syncRoot)
-        {
-            processingBookings.Remove(bookingId);
-        }
-    }
-
-    /// <summary>
-    /// Увеличивает счётчик неудачных попыток обработки брони.
-    /// </summary>
-    private int RegisterAttempt(Guid bookingId)
-    {
-        lock (syncRoot)
-        {
-            processingAttempts.TryGetValue(bookingId, out var currentAttempt);
-            var nextAttempt = currentAttempt + 1;
-            processingAttempts[bookingId] = nextAttempt;
-            return nextAttempt;
-        }
-    }
-
-    /// <summary>
-    /// Очищает счётчик попыток обработки брони.
-    /// </summary>
-    private void ClearAttempts(Guid bookingId)
-    {
-        lock (syncRoot)
-        {
-            processingAttempts.Remove(bookingId);
+            processingState.UnmarkProcessing(bookingId);
         }
     }
 }

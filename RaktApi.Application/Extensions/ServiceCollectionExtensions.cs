@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IBookingProcessor, BookingProcessor>();
+        services.AddSingleton<IBookingProcessingState, BookingProcessingState>();
         services.AddScoped<IBookingProcessingService, BookingProcessingService>();
 
         return services;
