@@ -28,7 +28,10 @@ public sealed class BookingService : IBookingService
     /// <summary>
     /// Создает бронирование для указанного события.
     /// </summary>
-    public async Task<Booking> CreateBookingAsync(Guid eventId, CancellationToken cancellationToken = default)
+    /// <param name="eventId">Идентификатор события.</param>
+    /// <param name="userId">Идентификатор пользователя.</param>
+    /// <param name="cancellationToken">Токен отмены операции.</param>
+    public async Task<Booking> CreateBookingAsync(Guid eventId, Guid userId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -43,7 +46,7 @@ public sealed class BookingService : IBookingService
                 throw new NoAvailableSeatsException("Мест нет, уйдите");
             }
 
-            var booking = Booking.Create(eventId);
+            var booking = Booking.Create(eventId, userId);
             await _bookingRepository.AddAsync(booking, cancellationToken);
             return booking;
         }
@@ -51,6 +54,15 @@ public sealed class BookingService : IBookingService
         {
             BookingSemaphore.Release();
         }
+    }
+
+    /// <summary>
+    /// Создает бронирование без идентификатора пользователя для обратной совместимости.
+    /// </summary>
+    /// <remarks>Новые вызовы должны использовать перегрузку с идентификатором пользователя.</remarks>
+    public Task<Booking> CreateBookingAsync(Guid eventId, CancellationToken cancellationToken = default)
+    {
+        return CreateBookingAsync(eventId, Guid.Empty, cancellationToken);
     }
 
     /// <summary>

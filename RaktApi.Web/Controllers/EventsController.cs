@@ -55,9 +55,9 @@ public class EventsController(
     [ProducesResponseType(typeof(BookingDto), StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<BookingDto>> CreateBooking(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<BookingDto>> CreateBooking(Guid id, [FromQuery] Guid userId, CancellationToken cancellationToken)
     {
-        var booking = await bookingService.CreateBookingAsync(id, cancellationToken);
+        var booking = await bookingService.CreateBookingAsync(id, userId, cancellationToken);
         var dto = booking.ToDto();
 
         logger.LogInformation("Создана бронь с Id {Id} для события {EventId}", booking.Id, booking.EventId);

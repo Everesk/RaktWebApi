@@ -85,7 +85,7 @@ public class BookingServiceTests : InMemoryDbTestBase
 
         using var scope = CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var booking = new Booking(eventEntity.Id);
+        var booking = new Booking(eventEntity.Id, Guid.NewGuid());
 
         booking.CreatedAt.Should().Be(default);
 

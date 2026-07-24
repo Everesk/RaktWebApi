@@ -24,6 +24,7 @@ public class BookingMapperTests
         // Assert
         dto.Id.Should().Be(booking.Id);
         dto.EventId.Should().Be(booking.EventId);
+        dto.UserId.Should().Be(booking.UserId);
         dto.Status.Should().Be(booking.Status);
         dto.CreatedAt.Should().Be(booking.CreatedAt);
         dto.ProcessedAt.Should().Be(booking.ProcessedAt);
@@ -34,6 +35,6 @@ public class BookingMapperTests
     /// </summary>
     private static Booking CreateBooking()
     {
-        return new Booking(Guid.NewGuid());
+        return new Booking(Guid.NewGuid(), Guid.NewGuid());
     }
 }

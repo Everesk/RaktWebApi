@@ -116,7 +116,7 @@ public sealed class BookingRepositoryTests(PostgreSqlFixture fixture) : PostgreS
     /// <summary>Создаёт и сохраняет бронирование для подготовки сценария репозитория.</summary>
     private static async Task<Booking> AddBookingAsync(RepositoryScope repositories, Guid eventId)
     {
-        var booking = Booking.Create(eventId);
+        var booking = Booking.Create(eventId, Guid.NewGuid());
         await repositories.Bookings.AddAsync(booking);
         return booking;
     }
