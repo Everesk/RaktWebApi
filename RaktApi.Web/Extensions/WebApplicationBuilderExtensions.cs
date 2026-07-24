@@ -1,6 +1,7 @@
 using Serilog;
 using Serilog.Events;
 using System.Reflection;
+using Microsoft.OpenApi;
 
 namespace RaktWebApi.Extensions;
 
@@ -33,6 +34,19 @@ public static class WebApplicationBuilderExtensions
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 options.IncludeXmlComments(xmlPath);
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Description = "Введите JWT-токен без префикса Bearer.",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT"
+                });
+                options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+                {
+                    [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+                });
             });
         }
 

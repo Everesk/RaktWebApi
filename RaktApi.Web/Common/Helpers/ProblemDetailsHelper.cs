@@ -46,6 +46,8 @@ public static class ProblemDetailsHelper
         return statusCode switch
         {
             StatusCodes.Status404NotFound => "Запрошенный ресурс не найден.",
+            StatusCodes.Status401Unauthorized => "Для выполнения операции передайте действительный JWT-токен в заголовке Authorization.",
+            StatusCodes.Status403Forbidden => "У текущего пользователя недостаточно прав для выполнения операции.",
             StatusCodes.Status405MethodNotAllowed => "HTTP-метод не поддерживается для данного маршрута.",
             StatusCodes.Status400BadRequest => "Запрос содержит некорректные данные.",
             StatusCodes.Status500InternalServerError => "На сервере произошла непредвиденная ошибка.",
@@ -62,6 +64,8 @@ public static class ProblemDetailsHelper
         {
             StatusCodes.Status400BadRequest => "Ошибка запроса",
             StatusCodes.Status404NotFound => "Ресурс не найден",
+            StatusCodes.Status401Unauthorized => "Требуется аутентификация",
+            StatusCodes.Status403Forbidden => "Доступ запрещен",
             StatusCodes.Status405MethodNotAllowed => "Метод не поддерживается",
             StatusCodes.Status500InternalServerError => "Внутренняя ошибка сервера",
             _ => "Ошибка"
