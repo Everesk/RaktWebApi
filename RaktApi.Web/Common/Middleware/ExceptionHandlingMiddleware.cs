@@ -71,7 +71,7 @@ public sealed class ExceptionHandlingMiddleware(
             UserAlreadyExistsException => (int)HttpStatusCode.Conflict,
             PastEventBookingException or ValidationException or InvalidTotalSeatsException => (int)HttpStatusCode.BadRequest,
             OperationForbiddenException => (int)HttpStatusCode.Forbidden,
-            InvalidCredentialsException => (int)HttpStatusCode.Unauthorized,
+            InvalidCredentialsException => (int)HttpStatusCode.NotFound,
             NotFoundException => (int)HttpStatusCode.NotFound,
             BadHttpRequestException => (int)HttpStatusCode.BadRequest,
             _ => (int)HttpStatusCode.InternalServerError

@@ -251,7 +251,7 @@ JWT требуется для `POST /events/{id}/book`, `GET /bookings/{id}` и 
 
 Ответы:
 
-- 201 Created — пользователь зарегистрирован;
+- 204 No Content — пользователь зарегистрирован;
 - 409 Conflict — логин уже занят.
 
 ### POST /auth/login
@@ -278,7 +278,7 @@ JWT требуется для `POST /events/{id}/book`, `GET /bookings/{id}` и 
 Ответы:
 
 - 200 OK — токен сформирован;
-- 401 Unauthorized — неверный логин или пароль.
+- 404 Not Found — неверный логин или пароль.
 
 ### Events
 
@@ -515,7 +515,7 @@ application/json
 Поддерживаются сценарии:
 - ValidationException - 400 Bad Request
 - PastEventBookingException - 400 Bad Request
-- InvalidCredentialsException - 401 Unauthorized
+- InvalidCredentialsException - 404 Not Found
 - отсутствие или недействительность JWT-токена - 401 Unauthorized
 - OperationForbiddenException - 403 Forbidden
 - недостаточная роль для операции - 403 Forbidden
