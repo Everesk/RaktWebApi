@@ -21,19 +21,26 @@ public abstract class PostgreSqlTestBase(PostgreSqlFixture fixture) : IAsyncLife
     protected RepositoryScope CreateRepositories()
     {
         var context = Fixture.CreateDbContext();
-        return new RepositoryScope(context, new EventRepository(context), new BookingRepository(context));
+        return new RepositoryScope(context, new EventRepository(context), new BookingRepository(context), new UserRepository(context));
     }
 
     /// <summary>
     /// Хранит контекст и репозитории, использующие его в рамках одного теста.
     /// </summary>
-    protected sealed class RepositoryScope(AppDbContext context, EventRepository events, BookingRepository bookings) : IAsyncDisposable
+    protected sealed class RepositoryScope(
+        AppDbContext context,
+        EventRepository events,
+        BookingRepository bookings,
+        UserRepository users) : IAsyncDisposable
     {
         /// <summary>Репозиторий событий.</summary>
         public EventRepository Events { get; } = events;
 
         /// <summary>Репозиторий бронирований.</summary>
         public BookingRepository Bookings { get; } = bookings;
+
+        /// <summary>Репозиторий пользователей.</summary>
+        public UserRepository Users { get; } = users;
 
         /// <summary>Освобождает контекст базы данных.</summary>
         public ValueTask DisposeAsync() => context.DisposeAsync();

@@ -68,8 +68,10 @@ public sealed class ExceptionHandlingMiddleware(
         {
             NoAvailableSeatsException => (int)HttpStatusCode.Conflict,
             ActiveBookingsLimitExceededException or BookingAlreadyCancelledException => (int)HttpStatusCode.Conflict,
+            UserAlreadyExistsException => (int)HttpStatusCode.Conflict,
             PastEventBookingException or ValidationException or InvalidTotalSeatsException => (int)HttpStatusCode.BadRequest,
             OperationForbiddenException => (int)HttpStatusCode.Forbidden,
+            InvalidCredentialsException => (int)HttpStatusCode.Unauthorized,
             NotFoundException => (int)HttpStatusCode.NotFound,
             BadHttpRequestException => (int)HttpStatusCode.BadRequest,
             _ => (int)HttpStatusCode.InternalServerError

@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
 
         services.AddOptions<BookingProcessingOptions>()
             .Bind(configuration.GetSection(BookingProcessingOptions.SectionName))
