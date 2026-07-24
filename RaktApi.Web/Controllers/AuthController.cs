@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using RaktApi.Application.DTO;
 using RaktApi.Application.Services;
 
@@ -14,6 +15,7 @@ public sealed class AuthController(IUserService userService) : ApiControllerBase
     /// <summary>
     /// Регистрирует нового пользователя.
     /// </summary>
+    [AllowAnonymous]
     [HttpPost("register")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
@@ -26,6 +28,7 @@ public sealed class AuthController(IUserService userService) : ApiControllerBase
     /// <summary>
     /// Проверяет учетные данные и возвращает JWT-токен.
     /// </summary>
+    [AllowAnonymous]
     [HttpPost("login")]
     [ProducesResponseType(typeof(AuthenticationDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]

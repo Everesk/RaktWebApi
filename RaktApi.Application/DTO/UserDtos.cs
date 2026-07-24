@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using RaktApi.Domain;
 
 namespace RaktApi.Application.DTO;
 
@@ -13,6 +15,13 @@ public sealed class RegisterUserDto
     /// <summary>Пароль нового пользователя.</summary>
     [Required]
     public string Password { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Роль нового пользователя. По умолчанию создается обычный пользователь.
+    /// </summary>
+    [EnumDataType(typeof(UserRole))]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public UserRole Role { get; set; } = UserRole.User;
 }
 
 /// <summary>Данные для входа пользователя.</summary>

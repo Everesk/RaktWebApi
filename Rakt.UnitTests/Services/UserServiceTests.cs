@@ -63,6 +63,23 @@ public class UserServiceTests : InMemoryDbTestBase
     }
 
     /// <summary>
+    /// Проверяет сохранение роли, указанной при регистрации.
+    /// </summary>
+    [Fact]
+    public async Task RegisterAsync_ShouldSaveSelectedRole()
+    {
+        // Arrange
+        using var serviceScope = CreateScopedService<IUserService>();
+        var dto = new RegisterUserDto { Login = "admin", Password = "password", Role = UserRole.Admin };
+
+        // Act
+        var user = await serviceScope.Service.RegisterAsync(dto);
+
+        // Assert
+        user.Role.Should().Be(UserRole.Admin);
+    }
+
+    /// <summary>
     /// Проверяет возврат токена при корректных учетных данных.
     /// </summary>
     [Fact]

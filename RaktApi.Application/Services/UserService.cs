@@ -22,7 +22,7 @@ public sealed class UserService(
             throw new UserAlreadyExistsException($"Пользователь с логином '{dto.Login}' уже существует.");
         }
 
-        var user = User.Create(dto.Login, passwordHasher.Hash(dto.Password), UserRole.User);
+        var user = User.Create(dto.Login, passwordHasher.Hash(dto.Password), dto.Role);
         await userRepository.AddAsync(user, cancellationToken);
         return user;
     }

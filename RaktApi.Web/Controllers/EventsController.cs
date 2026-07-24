@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using RaktApi.Application.DTO;
 using RaktApi.Application.Mappers;
 using RaktApi.Application.Services;
 using RaktApi.Domain;
+using RaktWebApi.Extensions;
 
 namespace RaktWebApi.Controllers;
 
@@ -51,14 +53,15 @@ public class EventsController(
     /// <summary>
     /// Создает бронь для указанного события.
     /// </summary>
+    [Authorize]
     [HttpPost("{id:guid}/book")]
     [ProducesResponseType(typeof(BookingDto), StatusCodes.Status202Accepted)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<BookingDto>> CreateBooking(Guid id, [FromQuery] Guid userId, CancellationToken cancellationToken)
+    public async Task<ActionResult<BookingDto>> CreateBooking(Guid id, CancellationToken cancellationToken)
     {
-        var booking = await bookingService.CreateBookingAsync(id, userId, cancellationToken);
+        var booking = await bookingService.CreateBookingAsync(id, User.GetUserId(), cancellationToken);
         var dto = booking.ToDto();
 
         logger.LogInformation("Создана бронь с Id {Id} для события {EventId}", booking.Id, booking.EventId);
@@ -91,6 +94,7 @@ public class EventsController(
     /// <summary>
     /// Создает новое событие.
     /// </summary>
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     [ProducesResponseType(typeof(EventInfoDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -106,6 +110,7 @@ public class EventsController(
     /// <summary>
     /// Обновляет существующее событие.
     /// </summary>
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -122,6 +127,7 @@ public class EventsController(
     /// <summary>
     /// Удаляет событие.
     /// </summary>
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
