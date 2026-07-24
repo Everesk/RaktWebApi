@@ -1,6 +1,6 @@
 # RaktWebApi
 
-Практикум, спринт 1–7
+Практикум, спринт 1–8
 Шундерюк Михаил
 
 ## Описание проекта
@@ -465,8 +465,15 @@ application/json
 
 Поддерживаются сценарии:
 - ValidationException - 400 Bad Request
+- PastEventBookingException - 400 Bad Request
+- InvalidCredentialsException - 401 Unauthorized
+- отсутствие или недействительность JWT-токена - 401 Unauthorized
+- OperationForbiddenException - 403 Forbidden
+- недостаточная роль для операции - 403 Forbidden
 - NotFoundException - 404 Not Found
 - NoAvailableSeatsException - 409 Conflict
+- ActiveBookingsLimitExceededException - 409 Conflict
+- UserAlreadyExistsException - 409 Conflict
 - прочие исключения - 500 Internal Server Error
 
 Пример ответа:
