@@ -27,6 +27,8 @@ public class BookingServiceTests : InMemoryDbTestBase
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<TestCurrentUserContext>();
+        services.AddScoped<ICurrentUserContext>(provider => provider.GetRequiredService<TestCurrentUserContext>());
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IEventRepository, EventRepository>();
     }
@@ -131,7 +133,9 @@ public class BookingServiceTests : InMemoryDbTestBase
         var booking = await service.CreateBookingAsync(eventEntity.Id, userId);
 
         // Act
-        await service.CancelBookingAsync(booking.Id, userId, UserRole.User);
+        var currentUser = serviceScope.Scope.ServiceProvider.GetRequiredService<TestCurrentUserContext>();
+        currentUser.UserId = userId;
+        await service.CancelBookingAsync(booking.Id);
 
         // Assert
         var cancelledBooking = await service.GetBookingByIdAsync(booking.Id);
@@ -156,7 +160,9 @@ public class BookingServiceTests : InMemoryDbTestBase
         var booking = await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
 
         // Act
-        await service.CancelBookingAsync(booking.Id, Guid.NewGuid(), UserRole.Admin);
+        var currentUser = serviceScope.Scope.ServiceProvider.GetRequiredService<TestCurrentUserContext>();
+        currentUser.Role = UserRole.Admin;
+        await service.CancelBookingAsync(booking.Id);
 
         // Assert
         var cancelledBooking = await service.GetBookingByIdAsync(booking.Id);
@@ -176,7 +182,7 @@ public class BookingServiceTests : InMemoryDbTestBase
         var booking = await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
 
         // Act
-        Func<Task> act = async () => await service.CancelBookingAsync(booking.Id, Guid.NewGuid(), UserRole.User);
+        Func<Task> act = async () => await service.CancelBookingAsync(booking.Id);
 
         // Assert
         await act.Should().ThrowAsync<OperationForbiddenException>();

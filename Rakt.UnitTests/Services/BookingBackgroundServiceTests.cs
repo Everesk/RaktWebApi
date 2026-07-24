@@ -27,6 +27,8 @@ public class BookingBackgroundServiceTests : InMemoryDbTestBase
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<TestCurrentUserContext>();
+        services.AddScoped<ICurrentUserContext>(provider => provider.GetRequiredService<TestCurrentUserContext>());
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IBookingProcessor, BookingProcessor>();

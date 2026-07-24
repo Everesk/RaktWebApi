@@ -1,7 +1,9 @@
 using RaktApi.Application.Extensions;
+using RaktApi.Application.Services;
 using RaktApi.Infrastructure.Extensions;
 using RaktApi.Infrastructure.Options;
 using RaktWebApi.Extensions;
+using RaktWebApi.Services;
 using Serilog;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -23,6 +25,8 @@ try
     builder.AddStandardConfiguration();
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
     var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
         ?? throw new InvalidOperationException("Не задана секция конфигурации Jwt.");
     builder.Services

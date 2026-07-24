@@ -19,10 +19,8 @@ public interface IBookingService
     /// Отменяет бронирование от имени пользователя.
     /// </summary>
     /// <param name="bookingId">Идентификатор отменяемого бронирования.</param>
-    /// <param name="userId">Идентификатор пользователя, выполняющего операцию.</param>
-    /// <param name="userRole">Роль пользователя, выполняющего операцию.</param>
     /// <param name="cancellationToken">Токен отмены операции.</param>
-    Task CancelBookingAsync(Guid bookingId, Guid userId, UserRole userRole, CancellationToken cancellationToken = default);
+    Task CancelBookingAsync(Guid bookingId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Возвращает бронирование по идентификатору.

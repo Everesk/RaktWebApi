@@ -35,7 +35,7 @@ public class BookingsController(
     }
 
     /// <summary>
-    /// Отменяет бронирование от имени указанного пользователя.
+    /// Отменяет бронирование от имени текущего пользователя.
     /// </summary>
     [Authorize]
     [HttpDelete("{id:guid}")]
@@ -47,11 +47,9 @@ public class BookingsController(
         Guid id,
         CancellationToken cancellationToken)
     {
-        var userId = User.GetUserId();
-        var userRole = User.IsInRole(nameof(UserRole.Admin)) ? UserRole.Admin : UserRole.User;
-        await bookingService.CancelBookingAsync(id, userId, userRole, cancellationToken);
+        await bookingService.CancelBookingAsync(id, cancellationToken);
 
-        logger.LogInformation("Отменена бронь с Id {Id} пользователем {UserId}", id, userId);
+        logger.LogInformation("Отменена бронь с Id {Id}", id);
 
         return NoContent();
     }

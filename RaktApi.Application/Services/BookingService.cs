@@ -15,6 +15,7 @@ public sealed class BookingService : IBookingService
     private static readonly SemaphoreSlim BookingSemaphore = new(1, 1);
     private readonly IBookingRepository _bookingRepository;
     private readonly IEventRepository _eventRepository;
+    private readonly ICurrentUserContext _currentUserContext;
     // Ограничивает число активных бронирований одного пользователя.
     private readonly int _maxActiveBookings;
 
@@ -26,10 +27,12 @@ public sealed class BookingService : IBookingService
     public BookingService(
         IBookingRepository bookingRepository,
         IEventRepository eventRepository,
+        ICurrentUserContext currentUserContext,
         IOptions<BookingOptions>? bookingOptions = null)
     {
         _bookingRepository = bookingRepository;
         _eventRepository = eventRepository;
+        _currentUserContext = currentUserContext;
         _maxActiveBookings = bookingOptions?.Value.MaxActiveBookings ?? new BookingOptions().MaxActiveBookings;
     }
 
@@ -81,8 +84,6 @@ public sealed class BookingService : IBookingService
     /// </summary>
     public async Task CancelBookingAsync(
         Guid bookingId,
-        Guid userId,
-        UserRole userRole,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -90,7 +91,7 @@ public sealed class BookingService : IBookingService
         var booking = await _bookingRepository.GetForUpdateAsync(bookingId, cancellationToken)
             ?? throw new NotFoundException($"Бронь с идентификатором '{bookingId}' не найдена.");
 
-        if (userRole != UserRole.Admin && booking.UserId != userId)
+        if (_currentUserContext.Role != UserRole.Admin && booking.UserId != _currentUserContext.UserId)
         {
             throw new OperationForbiddenException("Недостаточно прав для отмены этого бронирования.");
         }
