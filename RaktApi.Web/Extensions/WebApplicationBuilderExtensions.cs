@@ -9,6 +9,7 @@ using RaktApi.Infrastructure.Options;
 using RaktWebApi.Services;
 using System.Security.Claims;
 using System.Text;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace RaktWebApi.Extensions;
 
@@ -46,6 +47,20 @@ public static class WebApplicationBuilderExtensions
                     ClockSkew = TimeSpan.Zero,
                     NameClaimType = ClaimTypes.Name,
                     RoleClaimType = ClaimTypes.Role
+                };
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = context =>
+                    {
+                        var userIdValue = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier)
+                            ?? context.Principal?.FindFirstValue(JwtRegisteredClaimNames.Sub);
+                        if (!Guid.TryParse(userIdValue, out _))
+                        {
+                            context.Fail("JWT-токен не содержит корректный идентификатор пользователя.");
+                        }
+
+                        return Task.CompletedTask;
+                    }
                 };
             });
         builder.Services.AddAuthorization();
