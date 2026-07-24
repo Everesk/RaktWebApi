@@ -1,5 +1,6 @@
 using RaktApi.Infrastructure.Data;
 using RaktApi.Infrastructure.Repositories;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Rakt.IntegrationTests;
 
@@ -21,7 +22,11 @@ public abstract class PostgreSqlTestBase(PostgreSqlFixture fixture) : IAsyncLife
     protected RepositoryScope CreateRepositories()
     {
         var context = Fixture.CreateDbContext();
-        return new RepositoryScope(context, new EventRepository(context), new BookingRepository(context), new UserRepository(context));
+        return new RepositoryScope(
+            context,
+            new EventRepository(context),
+            new BookingRepository(context),
+            new UserRepository(context, NullLogger<UserRepository>.Instance));
     }
 
     /// <summary>

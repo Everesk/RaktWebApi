@@ -26,6 +26,7 @@ public class UserServiceTests : InMemoryDbTestBase
     /// <param name="services">Коллекция сервисов.</param>
     protected override void ConfigureServices(IServiceCollection services)
     {
+        services.AddLogging();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUserService, UserService>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();

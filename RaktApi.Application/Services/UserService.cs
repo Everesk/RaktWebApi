@@ -17,7 +17,7 @@ public sealed class UserService(
         ArgumentNullException.ThrowIfNull(dto);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (await userRepository.GetByLoginAsync(dto.Login, cancellationToken) is not null)
+        if (await userRepository.ExistsByLoginAsync(dto.Login, cancellationToken))
         {
             throw new UserAlreadyExistsException($"Пользователь с логином '{dto.Login}' уже существует.");
         }
