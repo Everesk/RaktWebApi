@@ -2,6 +2,13 @@ using Serilog;
 using Serilog.Events;
 using System.Reflection;
 using Microsoft.OpenApi;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using RaktApi.Application.Services;
+using RaktApi.Infrastructure.Options;
+using RaktWebApi.Services;
+using System.Security.Claims;
+using System.Text;
 
 namespace RaktWebApi.Extensions;
 
@@ -10,6 +17,42 @@ namespace RaktWebApi.Extensions;
 /// </summary>
 public static class WebApplicationBuilderExtensions
 {
+    /// <summary>
+    /// Регистрирует JWT-аутентификацию, авторизацию и контекст текущего пользователя.
+    /// </summary>
+    /// <param name="builder">Построитель веб-приложения.</param>
+    /// <returns>Исходный построитель с настроенной безопасностью.</returns>
+    /// <exception cref="InvalidOperationException">Секция JWT-настроек отсутствует.</exception>
+    public static WebApplicationBuilder AddJwtAuthentication(this WebApplicationBuilder builder)
+    {
+        var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+            ?? throw new InvalidOperationException("Не задана секция конфигурации Jwt.");
+
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
+        builder.Services
+            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)),
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtOptions.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = jwtOptions.Audience,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero,
+                    NameClaimType = ClaimTypes.Name,
+                    RoleClaimType = ClaimTypes.Role
+                };
+            });
+        builder.Services.AddAuthorization();
+
+        return builder;
+    }
+
     /// <summary>
     /// Применяет стандартную конфигурацию приложения:
     /// настройку DI-валидации, контроллеров и сваггер.

@@ -1,14 +1,7 @@
 using RaktApi.Application.Extensions;
-using RaktApi.Application.Services;
 using RaktApi.Infrastructure.Extensions;
-using RaktApi.Infrastructure.Options;
 using RaktWebApi.Extensions;
-using RaktWebApi.Services;
 using Serilog;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Security.Claims;
-using System.Text;
 
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
@@ -25,29 +18,7 @@ try
     builder.AddStandardConfiguration();
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
-    builder.Services.AddHttpContextAccessor();
-    builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
-    var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
-        ?? throw new InvalidOperationException("Не задана секция конфигурации Jwt.");
-    builder.Services
-        .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(options =>
-        {
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)),
-                ValidateIssuer = true,
-                ValidIssuer = jwtOptions.Issuer,
-                ValidateAudience = true,
-                ValidAudience = jwtOptions.Audience,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero,
-                NameClaimType = ClaimTypes.Name,
-                RoleClaimType = ClaimTypes.Role
-            };
-        });
-    builder.Services.AddAuthorization();
+    builder.AddJwtAuthentication();
 
     var app = builder.Build();
 
