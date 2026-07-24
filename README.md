@@ -231,6 +231,55 @@ JWT требуется для `POST /events/{id}/book`, `GET /bookings/{id}` и 
 
 ## API
 
+### Authentication
+
+Эндпоинты `AuthController` доступны без JWT и предназначены для регистрации и входа.
+
+### POST /auth/register
+
+Регистрирует пользователя. Поле `role` необязательно: по умолчанию используется `User`; для тестирования можно передать `Admin`.
+
+Пример тела запроса:
+
+```json
+{
+  "login": "admin",
+  "password": "strong-password",
+  "role": "Admin"
+}
+```
+
+Ответы:
+
+- 201 Created — пользователь зарегистрирован;
+- 409 Conflict — логин уже занят.
+
+### POST /auth/login
+
+Проверяет логин и пароль, затем возвращает JWT-токен.
+
+Пример тела запроса:
+
+```json
+{
+  "login": "admin",
+  "password": "strong-password"
+}
+```
+
+Пример ответа:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+Ответы:
+
+- 200 OK — токен сформирован;
+- 401 Unauthorized — неверный логин или пароль.
+
 ### Events
 
 ### Модель события
