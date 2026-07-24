@@ -8,16 +8,12 @@ namespace RaktApi.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class AddUsersAndBookingUser : Migration
     {
+        // Идентификатор технического пользователя для бронирований, созданных до появления пользователей.
+        private static readonly Guid LegacyBookingsUserId = new("59e7d81a-30a0-487a-bf6d-7913260d7326");
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<Guid>(
-                name: "user_id",
-                table: "bookings",
-                type: "uuid",
-                nullable: false,
-                defaultValue: new Guid("00000000-0000-0000-0000-000000000000"));
-
             migrationBuilder.CreateTable(
                 name: "users",
                 columns: table => new
@@ -31,6 +27,24 @@ namespace RaktApi.Infrastructure.Migrations
                 {
                     table.PrimaryKey("pk_users", x => x.id);
                 });
+
+            migrationBuilder.InsertData(
+                table: "users",
+                columns: new[] { "id", "login", "password_hash", "role" },
+                values: new object[]
+                {
+                    LegacyBookingsUserId,
+                    "__legacy_bookings_migration__",
+                    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+                    "User"
+                });
+
+            migrationBuilder.AddColumn<Guid>(
+                name: "user_id",
+                table: "bookings",
+                type: "uuid",
+                nullable: false,
+                defaultValue: LegacyBookingsUserId);
 
             migrationBuilder.CreateIndex(
                 name: "IX_bookings_user_id",
@@ -50,6 +64,15 @@ namespace RaktApi.Infrastructure.Migrations
                 principalTable: "users",
                 principalColumn: "id",
                 onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AlterColumn<Guid>(
+                name: "user_id",
+                table: "bookings",
+                type: "uuid",
+                nullable: false,
+                oldClrType: typeof(Guid),
+                oldType: "uuid",
+                oldDefaultValue: LegacyBookingsUserId);
         }
 
         /// <inheritdoc />
