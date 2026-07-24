@@ -20,7 +20,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBookingProcessor, BookingProcessor>();
         services.AddSingleton<IBookingProcessingState, BookingProcessingState>();
         services.AddScoped<IBookingProcessingService, BookingProcessingService>();
-
+        services.AddScoped<IUserService, UserService>();
         return services;
     }
 }

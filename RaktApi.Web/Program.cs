@@ -18,6 +18,7 @@ try
     builder.AddStandardConfiguration();
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.AddJwtAuthentication();
 
     var app = builder.Build();
 

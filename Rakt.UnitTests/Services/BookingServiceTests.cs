@@ -27,6 +27,8 @@ public class BookingServiceTests : InMemoryDbTestBase
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<TestCurrentUserContext>();
+        services.AddScoped<ICurrentUserContext>(provider => provider.GetRequiredService<TestCurrentUserContext>());
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IEventRepository, EventRepository>();
     }
@@ -53,16 +55,18 @@ public class BookingServiceTests : InMemoryDbTestBase
     {
         // Arrange
         var eventEntity = await SeedEventAsync();
+        var userId = Guid.NewGuid();
         using var serviceScope = CreateBookingServiceScope();
         var service = serviceScope.Service;
 
         // Act
-        var booking = await service.CreateBookingAsync(eventEntity.Id);
+        var booking = await service.CreateBookingAsync(eventEntity.Id, userId);
 
         // Assert
         booking.Should().NotBeNull();
         booking.Id.Should().NotBe(Guid.Empty);
         booking.EventId.Should().Be(eventEntity.Id);
+        booking.UserId.Should().Be(userId);
         booking.Status.Should().Be(BookingStatus.Pending);
         booking.ProcessedAt.Should().BeNull();
         booking.CreatedAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(2));
@@ -71,6 +75,143 @@ public class BookingServiceTests : InMemoryDbTestBase
         var context = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var storedEvent = await context.Events.AsNoTracking().FirstAsync(x => x.Id == eventEntity.Id);
         storedEvent.AvailableSeats.Should().Be(9);
+    }
+
+    /// <summary>
+    /// Проверяет запрет создания бронирования для уже начавшегося события.
+    /// </summary>
+    [Fact]
+    public async Task CreateBookingAsync_ShouldThrowPastEventBookingException_WhenEventHasStarted()
+    {
+        // Arrange
+        var eventEntity = await SeedEventAsync(startAt: DateTimeOffset.UtcNow.AddMinutes(-1));
+        using var serviceScope = CreateBookingServiceScope();
+        var service = serviceScope.Service;
+
+        // Act
+        Func<Task> act = async () => await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
+
+        // Assert
+        await act.Should().ThrowAsync<PastEventBookingException>();
+    }
+
+    /// <summary>
+    /// Проверяет запрет создания более десяти активных бронирований одним пользователем.
+    /// </summary>
+    [Fact]
+    public async Task CreateBookingAsync_ShouldThrowActiveBookingsLimitExceededException_WhenLimitIsReached()
+    {
+        // Arrange
+        var eventEntity = await SeedEventAsync(totalSeats: 11);
+        var userId = Guid.NewGuid();
+        using var serviceScope = CreateBookingServiceScope();
+        var service = serviceScope.Service;
+
+        for (var index = 0; index < 10; index++)
+        {
+            await service.CreateBookingAsync(eventEntity.Id, userId);
+        }
+
+        // Act
+        Func<Task> act = async () => await service.CreateBookingAsync(eventEntity.Id, userId);
+
+        // Assert
+        await act.Should().ThrowAsync<ActiveBookingsLimitExceededException>();
+    }
+
+    /// <summary>
+    /// Проверяет, что лимит активных бронирований одного пользователя не ограничивает другого пользователя.
+    /// </summary>
+    [Fact]
+    public async Task CreateBookingAsync_ShouldAllowAnotherUserToBook_WhenFirstUserHasReachedLimit()
+    {
+        // Arrange
+        var eventEntity = await SeedEventAsync(totalSeats: 11);
+        var firstUserId = Guid.NewGuid();
+        var secondUserId = Guid.NewGuid();
+        using var serviceScope = CreateBookingServiceScope();
+        var service = serviceScope.Service;
+
+        for (var index = 0; index < 10; index++)
+        {
+            await service.CreateBookingAsync(eventEntity.Id, firstUserId);
+        }
+
+        // Act
+        var booking = await service.CreateBookingAsync(eventEntity.Id, secondUserId);
+
+        // Assert
+        booking.UserId.Should().Be(secondUserId);
+        booking.Status.Should().Be(BookingStatus.Pending);
+    }
+
+    /// <summary>
+    /// Проверяет, что владелец может отменить свою бронь и место освобождается.
+    /// </summary>
+    [Fact]
+    public async Task CancelBookingAsync_ShouldCancelOwnBookingAndReleaseSeat()
+    {
+        // Arrange
+        var eventEntity = await SeedEventAsync(totalSeats: 1);
+        var userId = Guid.NewGuid();
+        using var serviceScope = CreateBookingServiceScope();
+        var service = serviceScope.Service;
+        var booking = await service.CreateBookingAsync(eventEntity.Id, userId);
+
+        // Act
+        var currentUser = serviceScope.Scope.ServiceProvider.GetRequiredService<TestCurrentUserContext>();
+        currentUser.UserId = userId;
+        await service.CancelBookingAsync(booking.Id);
+
+        // Assert
+        var cancelledBooking = await service.GetBookingByIdAsync(booking.Id);
+        cancelledBooking.Status.Should().Be(BookingStatus.Cancelled);
+
+        using var verificationScope = CreateScope();
+        var context = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var storedEvent = await context.Events.AsNoTracking().FirstAsync(x => x.Id == eventEntity.Id);
+        storedEvent.AvailableSeats.Should().Be(1);
+    }
+
+    /// <summary>
+    /// Проверяет, что администратор может отменить чужую бронь.
+    /// </summary>
+    [Fact]
+    public async Task CancelBookingAsync_ShouldAllowAdministratorToCancelAnotherUsersBooking()
+    {
+        // Arrange
+        var eventEntity = await SeedEventAsync();
+        using var serviceScope = CreateBookingServiceScope();
+        var service = serviceScope.Service;
+        var booking = await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
+
+        // Act
+        var currentUser = serviceScope.Scope.ServiceProvider.GetRequiredService<TestCurrentUserContext>();
+        currentUser.Role = UserRole.Admin;
+        await service.CancelBookingAsync(booking.Id);
+
+        // Assert
+        var cancelledBooking = await service.GetBookingByIdAsync(booking.Id);
+        cancelledBooking.Status.Should().Be(BookingStatus.Cancelled);
+    }
+
+    /// <summary>
+    /// Проверяет запрет отмены чужой брони обычным пользователем.
+    /// </summary>
+    [Fact]
+    public async Task CancelBookingAsync_ShouldThrowOperationForbiddenException_WhenUserDoesNotOwnBooking()
+    {
+        // Arrange
+        var eventEntity = await SeedEventAsync();
+        using var serviceScope = CreateBookingServiceScope();
+        var service = serviceScope.Service;
+        var booking = await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
+
+        // Act
+        Func<Task> act = async () => await service.CancelBookingAsync(booking.Id);
+
+        // Assert
+        await act.Should().ThrowAsync<OperationForbiddenException>();
     }
 
     /// <summary>
@@ -85,7 +226,7 @@ public class BookingServiceTests : InMemoryDbTestBase
 
         using var scope = CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var booking = new Booking(eventEntity.Id);
+        var booking = new Booking(eventEntity.Id, Guid.NewGuid());
 
         booking.CreatedAt.Should().Be(default);
 
@@ -120,9 +261,9 @@ public class BookingServiceTests : InMemoryDbTestBase
         // Act
         var bookings = new[]
         {
-            await service.CreateBookingAsync(eventEntity.Id),
-            await service.CreateBookingAsync(eventEntity.Id),
-            await service.CreateBookingAsync(eventEntity.Id)
+            await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid()),
+            await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid()),
+            await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid())
         };
 
         // Assert
@@ -146,7 +287,7 @@ public class BookingServiceTests : InMemoryDbTestBase
         var eventEntity = await SeedEventAsync();
         using var serviceScope = CreateBookingServiceScope();
         var service = serviceScope.Service;
-        var created = await service.CreateBookingAsync(eventEntity.Id);
+        var created = await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
 
         // Act
         var booking = await service.GetBookingByIdAsync(created.Id);
@@ -169,9 +310,9 @@ public class BookingServiceTests : InMemoryDbTestBase
         using var serviceScope = CreateBookingServiceScope();
         var service = serviceScope.Service;
 
-        var firstBooking = await service.CreateBookingAsync(firstEvent.Id);
-        var secondBooking = await service.CreateBookingAsync(firstEvent.Id);
-        await service.CreateBookingAsync(secondEvent.Id);
+        var firstBooking = await service.CreateBookingAsync(firstEvent.Id, Guid.NewGuid());
+        var secondBooking = await service.CreateBookingAsync(firstEvent.Id, Guid.NewGuid());
+        await service.CreateBookingAsync(secondEvent.Id, Guid.NewGuid());
 
         // Act
         var bookings = await service.GetBookingsByEventIdAsync(firstEvent.Id);
@@ -211,7 +352,7 @@ public class BookingServiceTests : InMemoryDbTestBase
         var eventEntity = await SeedEventAsync();
         using var serviceScope = CreateBookingServiceScope();
         var service = serviceScope.Service;
-        var created = await service.CreateBookingAsync(eventEntity.Id);
+        var created = await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
 
         using (var scope = CreateScope())
         {
@@ -239,7 +380,7 @@ public class BookingServiceTests : InMemoryDbTestBase
         var eventEntity = await SeedEventAsync();
         using var serviceScope = CreateBookingServiceScope();
         var service = serviceScope.Service;
-        var created = await service.CreateBookingAsync(eventEntity.Id);
+        var created = await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
 
         using (var scope = CreateScope())
         {
@@ -288,7 +429,7 @@ public class BookingServiceTests : InMemoryDbTestBase
         var eventId = Guid.NewGuid();
 
         // Act
-        Func<Task> act = async () => await service.CreateBookingAsync(eventId);
+        Func<Task> act = async () => await service.CreateBookingAsync(eventId, Guid.NewGuid());
 
         // Assert
         await act.Should().ThrowAsync<NotFoundException>()
@@ -306,10 +447,10 @@ public class BookingServiceTests : InMemoryDbTestBase
         using var serviceScope = CreateBookingServiceScope();
         var service = serviceScope.Service;
 
-        await service.CreateBookingAsync(eventEntity.Id);
+        await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
 
         // Act
-        Func<Task> act = async () => await service.CreateBookingAsync(eventEntity.Id);
+        Func<Task> act = async () => await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
 
         // Assert
         await act.Should().ThrowAsync<NoAvailableSeatsException>();
@@ -339,7 +480,7 @@ public class BookingServiceTests : InMemoryDbTestBase
 
                 try
                 {
-                    await bookingService.CreateBookingAsync(eventEntity.Id);
+                    await bookingService.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
                     return (Success: true, Exception: (Exception?)null);
                 }
                 catch (Exception ex)
@@ -376,7 +517,7 @@ public class BookingServiceTests : InMemoryDbTestBase
             {
                 using var scope = CreateScope();
                 var service = scope.ServiceProvider.GetRequiredService<IBookingService>();
-                return await service.CreateBookingAsync(eventEntity.Id);
+                return await service.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
             }));
 
         var bookings = await Task.WhenAll(tasks);

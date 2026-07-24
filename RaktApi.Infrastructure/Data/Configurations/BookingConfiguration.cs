@@ -30,6 +30,10 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
             .HasColumnName("event_id")
             .IsRequired();
 
+        builder.Property(x => x.UserId)
+            .HasColumnName("user_id")
+            .IsRequired();
+
         builder.Property(x => x.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();
@@ -40,5 +44,10 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
             .WithMany(x => x.Bookings)
             .HasForeignKey(x => x.EventId)
             .HasConstraintName("fk_bookings_events_event_id");
+
+        builder.HasOne(x => x.User)
+            .WithMany(x => x.Bookings)
+            .HasForeignKey(x => x.UserId)
+            .HasConstraintName("fk_bookings_users_user_id");
     }
 }

@@ -10,7 +10,7 @@ namespace Rakt.IntegrationTests;
 public sealed class MigrationSchemaTests(PostgreSqlFixture fixture) : PostgreSqlTestBase(fixture)
 {
     /// <summary>
-    /// Проверяет создание таблиц, первичных ключей и внешнего ключа бронирования миграцией.
+    /// Проверяет создание таблиц, первичных ключей и внешних ключей бронирования миграциями.
     /// </summary>
     [Fact]
     public async Task Migrations_CreateExpectedTablesAndConstraints()
@@ -36,16 +36,39 @@ public sealed class MigrationSchemaTests(PostgreSqlFixture fixture) : PostgreSql
                     AND constraints.constraint_type = 'PRIMARY KEY'
                     AND key_columns.table_name = 'bookings'
                     AND key_columns.column_name = 'id')
+               OR (constraints.constraint_name = 'pk_users'
+                    AND constraints.constraint_type = 'PRIMARY KEY'
+                    AND key_columns.table_name = 'users'
+                    AND key_columns.column_name = 'id')
                OR (constraints.constraint_name = 'fk_bookings_events_event_id'
                     AND constraints.constraint_type = 'FOREIGN KEY'
                     AND key_columns.table_name = 'bookings'
                     AND key_columns.column_name = 'event_id'
                     AND referenced_columns.table_name = 'events'
+                    AND referenced_columns.column_name = 'id')
+               OR (constraints.constraint_name = 'fk_bookings_users_user_id'
+                    AND constraints.constraint_type = 'FOREIGN KEY'
+                    AND key_columns.table_name = 'bookings'
+                    AND key_columns.column_name = 'user_id'
+                    AND referenced_columns.table_name = 'users'
                     AND referenced_columns.column_name = 'id');
             """;
 
         var constraintsCount = Convert.ToInt32(await command.ExecuteScalarAsync());
 
-        Assert.Equal(3, constraintsCount);
+        Assert.Equal(5, constraintsCount);
+
+        command.CommandText = """
+            SELECT COUNT(*)
+            FROM pg_indexes
+            WHERE schemaname = current_schema()
+              AND tablename = 'users'
+              AND indexname = 'ux_users_login'
+              AND indexdef LIKE 'CREATE UNIQUE INDEX%';
+            """;
+
+        var uniqueLoginIndexesCount = Convert.ToInt32(await command.ExecuteScalarAsync());
+
+        Assert.Equal(1, uniqueLoginIndexesCount);
     }
 }

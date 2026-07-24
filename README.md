@@ -1,6 +1,6 @@
 # RaktWebApi
 
-Практикум, спринт 1–7
+Практикум, спринт 1–8
 Шундерюк Михаил
 
 ## Описание проекта
@@ -119,6 +119,28 @@ git clone <ссылка-на-репозиторий>
 
 Если вы запускаете PostgreSQL локально, проверьте, что порт совпадает со строкой подключения. В этом проекте по умолчанию используется `5433`, чтобы не конфликтовать с возможной локальной установкой PostgreSQL на `5432`.
 
+### JWT-конфигурация
+
+Параметры выпуска и проверки JWT находятся в секции `Jwt` файла `RaktApi.Web/appsettings.json`:
+
+```json
+{
+  "Jwt": {
+    "Secret": "локальный-секрет-не-короче-32-символов",
+    "Issuer": "RaktApi",
+    "Audience": "RaktApiClients",
+    "LifetimeMinutes": 60
+  }
+}
+```
+
+- `Secret` — ключ подписи токенов; он должен содержать минимум 32 символа;
+- `Issuer` — издатель токена;
+- `Audience` — получатель токена;
+- `LifetimeMinutes` — время жизни токена в минутах.
+
+Значение `Secret` из репозитория предназначено только для локальной разработки. В production используйте уникальный криптографически стойкий секрет, передавайте его через переменную окружения или защищённое хранилище секретов и не сохраняйте в `appsettings.json`.
+
 ### PostgreSQL через Docker Compose
 
 Для быстрого запуска PostgreSQL можно использовать `docker-compose.yml` из корня репозитория:
@@ -181,7 +203,82 @@ Swagger доступен только в режиме разработки по 
 
 Через Swagger можно просматривать и тестировать все доступные эндпоинты API.
 
+### Получение JWT через Swagger
+
+1. Откройте `/swagger` в режиме разработки.
+2. Вызовите `POST /auth/register`, передав логин, пароль и при необходимости роль. Если поле `role` не указано, создается пользователь с ролью `User`; для тестирования допускается строковое значение `"Admin"`.
+3. Вызовите `POST /auth/login` с теми же логином и паролем.
+4. Скопируйте значение `token` из ответа, нажмите кнопку `Authorize` в верхней части Swagger и вставьте токен без префикса `Bearer`. Swagger будет автоматически передавать его в защищённых запросах.
+
+В других HTTP-клиентах JWT передается в заголовке:
+
+```http
+Authorization: Bearer <token>
+```
+
+## Роли и разграничение прав
+
+В системе предусмотрены две роли:
+
+| Роль | Права |
+| --- | --- |
+| `User` | Регистрация, вход, создание брони, просмотр брони по идентификатору и отмена только собственной брони. |
+| `Admin` | Все права `User`, отмена любой брони, создание, изменение и удаление событий. |
+
+Без JWT доступны только `POST /auth/register` и `POST /auth/login`.
+
+JWT требуется для `POST /events/{id}/book`, `GET /bookings/{id}` и `DELETE /bookings/{id}`. Операции `POST /events`, `PUT /events/{id}` и `DELETE /events/{id}` доступны только роли `Admin`.
+
 ## API
+
+### Authentication
+
+Эндпоинты `AuthController` доступны без JWT и предназначены для регистрации и входа.
+
+### POST /auth/register
+
+Регистрирует пользователя. Поле `role` необязательно: по умолчанию используется `User`; для тестирования можно передать `Admin`.
+
+Пример тела запроса:
+
+```json
+{
+  "login": "admin",
+  "password": "strong-password",
+  "role": "Admin"
+}
+```
+
+Ответы:
+
+- 204 No Content — пользователь зарегистрирован;
+- 409 Conflict — логин уже занят.
+
+### POST /auth/login
+
+Проверяет логин и пароль, затем возвращает JWT-токен.
+
+Пример тела запроса:
+
+```json
+{
+  "login": "admin",
+  "password": "strong-password"
+}
+```
+
+Пример ответа:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+Ответы:
+
+- 200 OK — токен сформирован;
+- 404 Not Found — неверный логин или пароль.
 
 ### Events
 
@@ -417,8 +514,15 @@ application/json
 
 Поддерживаются сценарии:
 - ValidationException - 400 Bad Request
+- PastEventBookingException - 400 Bad Request
+- InvalidCredentialsException - 404 Not Found
+- отсутствие или недействительность JWT-токена - 401 Unauthorized
+- OperationForbiddenException - 403 Forbidden
+- недостаточная роль для операции - 403 Forbidden
 - NotFoundException - 404 Not Found
 - NoAvailableSeatsException - 409 Conflict
+- ActiveBookingsLimitExceededException - 409 Conflict
+- UserAlreadyExistsException - 409 Conflict
 - прочие исключения - 500 Internal Server Error
 
 Пример ответа:

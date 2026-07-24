@@ -18,6 +18,11 @@ public class BookingDto
     public Guid EventId { get; set; }
 
     /// <summary>
+    /// Идентификатор пользователя, создавшего бронирование.
+    /// </summary>
+    public Guid UserId { get; set; }
+
+    /// <summary>
     /// Текущий статус бронирования.
     /// </summary>
     public BookingStatus Status { get; set; }

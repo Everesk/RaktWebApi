@@ -27,6 +27,8 @@ public class BookingBackgroundServiceTests : InMemoryDbTestBase
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<TestCurrentUserContext>();
+        services.AddScoped<ICurrentUserContext>(provider => provider.GetRequiredService<TestCurrentUserContext>());
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IBookingProcessor, BookingProcessor>();
@@ -157,7 +159,7 @@ public class BookingBackgroundServiceTests : InMemoryDbTestBase
     {
         using var scope = CreateScope();
         var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
-        return await bookingService.CreateBookingAsync(eventId);
+        return await bookingService.CreateBookingAsync(eventId, Guid.NewGuid());
     }
 
     /// <summary>

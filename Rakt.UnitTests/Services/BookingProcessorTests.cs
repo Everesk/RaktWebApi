@@ -23,6 +23,8 @@ public class BookingProcessorTests : InMemoryDbTestBase
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<TestCurrentUserContext>();
+        services.AddScoped<ICurrentUserContext>(provider => provider.GetRequiredService<TestCurrentUserContext>());
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddSingleton<IBookingProcessor, BookingProcessor>();
@@ -53,7 +55,7 @@ public class BookingProcessorTests : InMemoryDbTestBase
         var eventEntity = await SeedEventAsync(totalSeats: 1);
         using var bookingScope = CreateScope();
         var bookingService = bookingScope.ServiceProvider.GetRequiredService<IBookingService>();
-        var booking = await bookingService.CreateBookingAsync(eventEntity.Id);
+        var booking = await bookingService.CreateBookingAsync(eventEntity.Id, Guid.NewGuid());
 
         var processor = GetProcessor();
 

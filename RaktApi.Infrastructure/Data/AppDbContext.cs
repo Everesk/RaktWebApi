@@ -28,6 +28,11 @@ public sealed class AppDbContext : DbContext
     public DbSet<Booking> Bookings => Set<Booking>();
 
     /// <summary>
+    /// Таблица пользователей.
+    /// </summary>
+    public DbSet<User> Users => Set<User>();
+
+    /// <summary>
     /// Настраивает модель данных и автоматически подключает все конфигурации из сборки.
     /// </summary>
     /// <param name="modelBuilder">Построитель модели EF Core.</param>
