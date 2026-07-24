@@ -120,6 +120,32 @@ public class BookingServiceTests : InMemoryDbTestBase
     }
 
     /// <summary>
+    /// Проверяет, что лимит активных бронирований одного пользователя не ограничивает другого пользователя.
+    /// </summary>
+    [Fact]
+    public async Task CreateBookingAsync_ShouldAllowAnotherUserToBook_WhenFirstUserHasReachedLimit()
+    {
+        // Arrange
+        var eventEntity = await SeedEventAsync(totalSeats: 11);
+        var firstUserId = Guid.NewGuid();
+        var secondUserId = Guid.NewGuid();
+        using var serviceScope = CreateBookingServiceScope();
+        var service = serviceScope.Service;
+
+        for (var index = 0; index < 10; index++)
+        {
+            await service.CreateBookingAsync(eventEntity.Id, firstUserId);
+        }
+
+        // Act
+        var booking = await service.CreateBookingAsync(eventEntity.Id, secondUserId);
+
+        // Assert
+        booking.UserId.Should().Be(secondUserId);
+        booking.Status.Should().Be(BookingStatus.Pending);
+    }
+
+    /// <summary>
     /// Проверяет, что владелец может отменить свою бронь и место освобождается.
     /// </summary>
     [Fact]
