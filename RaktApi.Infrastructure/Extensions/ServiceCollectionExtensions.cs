@@ -2,11 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RaktApi.Application.Ports;
+using RaktApi.Application.Services;
 using RaktApi.Infrastructure.Data;
 using RaktApi.Infrastructure.Data.Interceptors;
 using RaktApi.Infrastructure.BackgroundServices;
 using RaktApi.Infrastructure.Options;
 using RaktApi.Infrastructure.Repositories;
+using RaktApi.Infrastructure.Services;
 
 namespace RaktApi.Infrastructure.Extensions;
 
@@ -38,6 +40,13 @@ public static class ServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
         services.AddHostedService<BookingBackgroundService>();
+
+        services.AddOptions<JwtOptions>()
+            .Bind(configuration.GetSection(JwtOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();
 
         return services;
     }
