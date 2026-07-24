@@ -67,7 +67,9 @@ public sealed class ExceptionHandlingMiddleware(
         return exception switch
         {
             NoAvailableSeatsException => (int)HttpStatusCode.Conflict,
-            ValidationException or InvalidTotalSeatsException => (int)HttpStatusCode.BadRequest,
+            ActiveBookingsLimitExceededException or BookingAlreadyCancelledException => (int)HttpStatusCode.Conflict,
+            PastEventBookingException or ValidationException or InvalidTotalSeatsException => (int)HttpStatusCode.BadRequest,
+            OperationForbiddenException => (int)HttpStatusCode.Forbidden,
             NotFoundException => (int)HttpStatusCode.NotFound,
             BadHttpRequestException => (int)HttpStatusCode.BadRequest,
             _ => (int)HttpStatusCode.InternalServerError

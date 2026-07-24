@@ -19,6 +19,9 @@ public interface IBookingRepository
     /// <summary>Возвращает бронирования указанного события.</summary>
     Task<IReadOnlyCollection<Booking>> GetByEventIdAsync(Guid eventId, CancellationToken cancellationToken = default);
 
+    /// <summary>Возвращает количество активных бронирований пользователя.</summary>
+    Task<int> CountActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
     /// <summary>Возвращает идентификаторы бронирований, ожидающих обработки.</summary>
     Task<IReadOnlyCollection<Guid>> GetPendingIdsAsync(CancellationToken cancellationToken = default);
 

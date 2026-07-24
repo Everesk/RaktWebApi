@@ -16,10 +16,13 @@ public interface IBookingService
     Task<Booking> CreateBookingAsync(Guid eventId, Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Создает бронирование для указанного события без идентификатора пользователя.
+    /// Отменяет бронирование от имени пользователя.
     /// </summary>
-    /// <remarks>Временная перегрузка для обратной совместимости. Новые вызовы должны передавать идентификатор пользователя.</remarks>
-    Task<Booking> CreateBookingAsync(Guid eventId, CancellationToken cancellationToken = default);
+    /// <param name="bookingId">Идентификатор отменяемого бронирования.</param>
+    /// <param name="userId">Идентификатор пользователя, выполняющего операцию.</param>
+    /// <param name="userRole">Роль пользователя, выполняющего операцию.</param>
+    /// <param name="cancellationToken">Токен отмены операции.</param>
+    Task CancelBookingAsync(Guid bookingId, Guid userId, UserRole userRole, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Возвращает бронирование по идентификатору.

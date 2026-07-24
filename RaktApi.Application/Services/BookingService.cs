@@ -1,6 +1,8 @@
 using RaktApi.Domain;
 using RaktApi.Domain.Exceptions;
 using RaktApi.Application.Ports;
+using RaktApi.Application.Options;
+using Microsoft.Extensions.Options;
 
 namespace RaktApi.Application.Services;
 
@@ -13,16 +15,22 @@ public sealed class BookingService : IBookingService
     private static readonly SemaphoreSlim BookingSemaphore = new(1, 1);
     private readonly IBookingRepository _bookingRepository;
     private readonly IEventRepository _eventRepository;
+    // Ограничивает число активных бронирований одного пользователя.
+    private readonly int _maxActiveBookings;
 
     /// <summary>
     /// Создает сервис бронирований.
     /// </summary>
     /// <param name="bookingRepository">Репозиторий бронирований.</param>
     /// <param name="eventRepository">Репозиторий событий.</param>
-    public BookingService(IBookingRepository bookingRepository, IEventRepository eventRepository)
+    public BookingService(
+        IBookingRepository bookingRepository,
+        IEventRepository eventRepository,
+        IOptions<BookingOptions>? bookingOptions = null)
     {
         _bookingRepository = bookingRepository;
         _eventRepository = eventRepository;
+        _maxActiveBookings = bookingOptions?.Value.MaxActiveBookings ?? new BookingOptions().MaxActiveBookings;
     }
 
     /// <summary>
@@ -41,6 +49,18 @@ public sealed class BookingService : IBookingService
             var eventEntity = await _eventRepository.GetForUpdateAsync(eventId, cancellationToken)
                 ?? throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
 
+            if (eventEntity.StartAt <= DateTimeOffset.UtcNow)
+            {
+                throw new PastEventBookingException("Нельзя забронировать уже начавшееся событие.");
+            }
+
+            var activeBookingsCount = await _bookingRepository.CountActiveByUserIdAsync(userId, cancellationToken);
+            if (activeBookingsCount >= _maxActiveBookings)
+            {
+                throw new ActiveBookingsLimitExceededException(
+                    $"Достигнут лимит активных бронирований: {_maxActiveBookings}.");
+            }
+
             if (!eventEntity.TryReserveSeats())
             {
                 throw new NoAvailableSeatsException("Мест нет, уйдите");
@@ -57,12 +77,35 @@ public sealed class BookingService : IBookingService
     }
 
     /// <summary>
-    /// Создает бронирование без идентификатора пользователя для обратной совместимости.
+    /// Отменяет бронирование, если пользователь является его владельцем или администратором.
     /// </summary>
-    /// <remarks>Новые вызовы должны использовать перегрузку с идентификатором пользователя.</remarks>
-    public Task<Booking> CreateBookingAsync(Guid eventId, CancellationToken cancellationToken = default)
+    public async Task CancelBookingAsync(
+        Guid bookingId,
+        Guid userId,
+        UserRole userRole,
+        CancellationToken cancellationToken = default)
     {
-        return CreateBookingAsync(eventId, Guid.Empty, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var booking = await _bookingRepository.GetForUpdateAsync(bookingId, cancellationToken)
+            ?? throw new NotFoundException($"Бронь с идентификатором '{bookingId}' не найдена.");
+
+        if (userRole != UserRole.Admin && booking.UserId != userId)
+        {
+            throw new OperationForbiddenException("Недостаточно прав для отмены этого бронирования.");
+        }
+
+        var shouldReleaseSeat = booking.Status is BookingStatus.Pending or BookingStatus.Confirmed;
+        booking.Cancel();
+
+        if (shouldReleaseSeat)
+        {
+            var eventEntity = await _eventRepository.GetForUpdateAsync(booking.EventId, cancellationToken)
+                ?? throw new NotFoundException($"Событие с идентификатором '{booking.EventId}' не найдено.");
+            eventEntity.ReleaseSeats();
+        }
+
+        await _bookingRepository.UpdateAsync(cancellationToken);
     }
 
     /// <summary>

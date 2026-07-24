@@ -53,6 +53,7 @@ public class EventsController(
     /// </summary>
     [HttpPost("{id:guid}/book")]
     [ProducesResponseType(typeof(BookingDto), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<BookingDto>> CreateBooking(Guid id, [FromQuery] Guid userId, CancellationToken cancellationToken)

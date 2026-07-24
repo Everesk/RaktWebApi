@@ -86,17 +86,22 @@ public abstract class InMemoryDbTestBase : IDisposable
     /// </summary>
     /// <param name="totalSeats">Общее число мест.</param>
     /// <param name="title">Название события.</param>
+    /// <param name="startAt">Дата и время начала события.</param>
     /// <returns>Созданное событие.</returns>
-    protected async Task<Event> SeedEventAsync(int totalSeats = 10, string title = "Тестовое событие")
+    protected async Task<Event> SeedEventAsync(
+        int totalSeats = 10,
+        string title = "Тестовое событие",
+        DateTimeOffset? startAt = null)
     {
         using var scope = CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        var eventStartAt = startAt ?? DateTimeOffset.UtcNow.AddDays(1);
         var eventEntity = new Event(
             title: title,
             description: null,
-            startAt: Utc(2026, 4, 1, 10, 0, 0),
-            endAt: Utc(2026, 4, 1, 11, 0, 0),
+            startAt: eventStartAt,
+            endAt: eventStartAt.AddHours(1),
             totalSeats: totalSeats);
 
         await context.Events.AddAsync(eventEntity);

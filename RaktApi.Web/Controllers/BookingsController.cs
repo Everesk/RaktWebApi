@@ -30,4 +30,25 @@ public class BookingsController(
 
         return Ok(dto);
     }
+
+    /// <summary>
+    /// Отменяет бронирование от имени указанного пользователя.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Cancel(
+        Guid id,
+        [FromQuery] Guid userId,
+        [FromQuery] UserRole userRole,
+        CancellationToken cancellationToken)
+    {
+        await bookingService.CancelBookingAsync(id, userId, userRole, cancellationToken);
+
+        logger.LogInformation("Отменена бронь с Id {Id} пользователем {UserId}", id, userId);
+
+        return NoContent();
+    }
 }

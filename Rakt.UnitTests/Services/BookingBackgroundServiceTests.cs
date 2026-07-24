@@ -157,7 +157,7 @@ public class BookingBackgroundServiceTests : InMemoryDbTestBase
     {
         using var scope = CreateScope();
         var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
-        return await bookingService.CreateBookingAsync(eventId);
+        return await bookingService.CreateBookingAsync(eventId, Guid.NewGuid());
     }
 
     /// <summary>

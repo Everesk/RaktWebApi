@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RaktApi.Application.Ports;
 using RaktApi.Application.Services;
+using RaktApi.Application.Options;
 using RaktApi.Infrastructure.Data;
 using RaktApi.Infrastructure.Data.Interceptors;
 using RaktApi.Infrastructure.BackgroundServices;
@@ -40,6 +41,11 @@ public static class ServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
         services.AddHostedService<BookingBackgroundService>();
+
+        services.AddOptions<BookingOptions>()
+            .Bind(configuration.GetSection(BookingOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
         services.AddOptions<JwtOptions>()
             .Bind(configuration.GetSection(JwtOptions.SectionName))
