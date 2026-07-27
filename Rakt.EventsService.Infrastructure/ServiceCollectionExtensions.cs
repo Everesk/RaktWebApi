@@ -9,8 +9,16 @@ public static class ServiceCollectionExtensions
     /// <summary>Добавляет доступ к БД и реализации портов событий.</summary>
     public static IServiceCollection AddEventsInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<EventsDbContext>(options => options.UseNpgsql(configuration.GetConnectionString("EventsDatabase")));
+        services.AddDbContext<EventsDbContext>(options =>
+            options.UseNpgsql(configuration.GetConnectionString("EventsDatabase")));
+        services.AddOptions<KafkaOptions>()
+            .Bind(configuration.GetSection(KafkaOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddScoped<IEventRepository, EventRepository>();
+        services.AddHostedService<KafkaTopicInitializer>();
+        services.AddHostedService<BookingConfirmedConsumer>();
+
         return services;
     }
 }
