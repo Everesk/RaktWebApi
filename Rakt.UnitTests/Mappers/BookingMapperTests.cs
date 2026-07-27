@@ -7,6 +7,7 @@ namespace Rakt.Tests.Mappers;
 /// <summary>
 /// Набор тестов для маппинга бронирований.
 /// </summary>
+[Trait("Category", "Unit")]
 public class BookingMapperTests
 {
     /// <summary>

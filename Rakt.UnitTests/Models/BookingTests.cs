@@ -7,6 +7,7 @@ namespace Rakt.Tests.Models;
 /// <summary>
 /// Набор тестов для модели <see cref="Booking"/>.
 /// </summary>
+[Trait("Category", "Unit")]
 public class BookingTests
 {
     /// <summary>

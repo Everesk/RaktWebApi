@@ -2,6 +2,7 @@ using Rakt.UsersService.Infrastructure;
 using Xunit;
 namespace Rakt.UsersService.UnitTests;
 /// <summary>Проверки хеширования паролей.</summary>
+[Trait("Category", "Unit")]
 public sealed class PasswordHasherTests
 {
     [Fact]

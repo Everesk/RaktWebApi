@@ -8,6 +8,7 @@ namespace Rakt.BookingsService.UnitTests;
 /// <summary>
 /// Проверки прикладного сценария фоновой обработки броней.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class BookingProcessingServiceTests
 {
     /// <summary>

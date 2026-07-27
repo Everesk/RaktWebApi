@@ -14,6 +14,7 @@ namespace Rakt.Tests.Services;
 /// <summary>
 /// Набор тестов для сервиса <see cref="EventService"/>.
 /// </summary>
+[Trait("Category", "Unit")]
 public class EventServiceTests : InMemoryDbTestBase
 {
     /// <summary>

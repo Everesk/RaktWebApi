@@ -18,6 +18,7 @@ namespace Rakt.Tests.Services;
 /// <summary>
 /// Набор тестов для сервиса <see cref="UserService"/>.
 /// </summary>
+[Trait("Category", "Unit")]
 public class UserServiceTests : InMemoryDbTestBase
 {
     /// <summary>

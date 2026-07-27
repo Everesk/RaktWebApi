@@ -15,6 +15,7 @@ namespace Rakt.Tests.Services;
 /// <summary>
 /// Набор тестов для сервиса <see cref="BookingService"/>.
 /// </summary>
+[Trait("Category", "Unit")]
 public class BookingServiceTests : InMemoryDbTestBase
 {
     private const int OverbookingTotalSeats = 5;

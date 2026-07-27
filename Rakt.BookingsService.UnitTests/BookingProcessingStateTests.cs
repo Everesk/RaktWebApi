@@ -6,6 +6,7 @@ namespace Rakt.BookingsService.UnitTests;
 /// <summary>
 /// Проверки состояния фоновой обработки броней.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class BookingProcessingStateTests
 {
     /// <summary>

@@ -8,6 +8,7 @@ using Rakt.UsersService.Infrastructure;
 using Xunit;
 namespace Rakt.UsersService.UnitTests;
 /// <summary>Проверки генератора JWT.</summary>
+[Trait("Category", "Unit")]
 public sealed class JwtTokenGeneratorTests
 {
     [Fact]

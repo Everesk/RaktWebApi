@@ -13,6 +13,7 @@ namespace Rakt.Tests.Services;
 /// <summary>
 /// Набор тестов для <see cref="JwtTokenGenerator"/>.
 /// </summary>
+[Trait("Category", "Unit")]
 public class JwtTokenGeneratorTests
 {
     /// <summary>

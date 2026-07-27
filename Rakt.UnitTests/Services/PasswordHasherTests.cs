@@ -6,6 +6,7 @@ namespace Rakt.Tests.Services;
 /// <summary>
 /// Набор тестов для <see cref="PasswordHasher"/>.
 /// </summary>
+[Trait("Category", "Unit")]
 public class PasswordHasherTests
 {
     /// <summary>

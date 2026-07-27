@@ -14,6 +14,7 @@ namespace Rakt.Tests.Services;
 /// <summary>
 /// Тесты для обработчика бронирований.
 /// </summary>
+[Trait("Category", "Unit")]
 public class BookingProcessorTests : InMemoryDbTestBase
 {
     /// <summary>

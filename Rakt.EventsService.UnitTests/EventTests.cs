@@ -9,6 +9,7 @@ using Xunit;
 namespace Rakt.EventsService.UnitTests;
 
 /// <summary>Изолированные проверки доменной модели и CRUD-сценариев событий.</summary>
+[Trait("Category", "Unit")]
 public sealed class EventTests
 {
     /// <summary>Проверяет создание события.</summary>

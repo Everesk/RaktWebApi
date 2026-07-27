@@ -8,6 +8,7 @@ namespace Rakt.BookingsService.UnitTests;
 /// <summary>
 /// Проверки локальных сценариев создания и отмены броней.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class BookingServiceTests
 {
     /// <summary>

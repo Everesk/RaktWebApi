@@ -8,6 +8,7 @@ namespace Rakt.BookingsService.UnitTests;
 /// <summary>
 /// Проверки автоматического заполнения времени создания брони.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class BookingCreatedAtInterceptorTests
 {
     /// <summary>

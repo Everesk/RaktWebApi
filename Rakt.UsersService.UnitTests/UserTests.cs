@@ -9,6 +9,7 @@ using Xunit;
 namespace Rakt.UsersService.UnitTests;
 
 /// <summary>Проверки доменной модели и сценариев пользователей.</summary>
+[Trait("Category", "Unit")]
 public sealed class UserTests
 {
     /// <summary>Проверяет сохранение хеша при регистрации.</summary>

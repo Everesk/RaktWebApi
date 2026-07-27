@@ -7,6 +7,7 @@ namespace Rakt.BookingsService.UnitTests;
 /// <summary>
 /// Проверки доменной модели брони.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class BookingTests
 {
     /// <summary>

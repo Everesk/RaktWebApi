@@ -8,6 +8,7 @@ namespace Rakt.BookingsService.UnitTests;
 /// <summary>
 /// Проверки подтверждения брони после ответа сервиса событий.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class BookingConfirmationServiceTests
 {
     /// <summary>
