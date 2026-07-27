@@ -6,14 +6,15 @@ namespace Rakt.UsersService.Presentation.Controllers;
 [Route("auth")]
 public sealed class AuthController(IUserService users) : ApiControllerBase
 {
-    /// <summary>Регистрирует пользователя и возвращает JWT-токен.</summary>
+    /// <summary>Регистрирует пользователя.</summary>
     [AllowAnonymous]
     [HttpPost("register")]
-    [ProducesResponseType(typeof(AuthenticationResult), StatusCodes.Status201Created)]
-    public async Task<ActionResult<AuthenticationResult>> Register(RegisterUserCommand command, CancellationToken cancellationToken)
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Register(RegisterUserCommand command, CancellationToken cancellationToken)
     {
-        var result = await users.RegisterAsync(command, cancellationToken);
-        return Created(string.Empty, result);
+        await users.RegisterAsync(command, cancellationToken);
+
+        return NoContent();
     }
     /// <summary>Проверяет учётные данные и возвращает JWT-токен.</summary>
     [AllowAnonymous]

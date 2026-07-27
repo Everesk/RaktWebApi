@@ -26,6 +26,20 @@ internal sealed class InMemoryBookingRepository : IBookingRepository
     }
 
     /// <summary>
+    /// Возвращает брони указанного события.
+    /// </summary>
+    public Task<IReadOnlyCollection<Booking>> GetByEventIdAsync(
+        Guid eventId,
+        CancellationToken ct = default)
+    {
+        IReadOnlyCollection<Booking> bookings = _bookings.Values
+            .Where(booking => booking.EventId == eventId)
+            .ToArray();
+
+        return Task.FromResult(bookings);
+    }
+
+    /// <summary>
     /// Возвращает идентификаторы броней в статусе ожидания.
     /// </summary>
     public Task<IReadOnlyCollection<Guid>> GetPendingIdsAsync(CancellationToken ct = default)

@@ -14,6 +14,19 @@ public sealed class BookingRepository(BookingsDbContext db) : IBookingRepository
     }
 
     /// <summary>
+    /// Возвращает брони указанного события без отслеживания изменений.
+    /// </summary>
+    public async Task<IReadOnlyCollection<Booking>> GetByEventIdAsync(
+        Guid eventId,
+        CancellationToken ct = default)
+    {
+        return await db.Bookings
+            .AsNoTracking()
+            .Where(booking => booking.EventId == eventId)
+            .ToListAsync(ct);
+    }
+
+    /// <summary>
     /// Возвращает идентификаторы броней, которые ожидают подтверждения.
     /// </summary>
     public async Task<IReadOnlyCollection<Guid>> GetPendingIdsAsync(CancellationToken ct = default)

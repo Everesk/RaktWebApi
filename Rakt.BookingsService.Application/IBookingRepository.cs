@@ -9,6 +9,11 @@ public interface IBookingRepository
     Task<Booking?> GetAsync(Guid id, CancellationToken ct = default);
 
     /// <summary>
+    /// Возвращает брони указанного события.
+    /// </summary>
+    Task<IReadOnlyCollection<Booking>> GetByEventIdAsync(Guid eventId, CancellationToken ct = default);
+
+    /// <summary>
     /// Возвращает идентификаторы броней, ожидающих фоновой обработки.
     /// </summary>
     Task<IReadOnlyCollection<Guid>> GetPendingIdsAsync(CancellationToken ct = default);
