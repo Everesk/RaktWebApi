@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -5,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Rakt.BookingsService.Infrastructure.Migrations;
 
 /// <inheritdoc />
+[DbContext(typeof(BookingsDbContext))]
 [Migration("20260727170000_AddBookingProcessingMetadata")]
 public sealed class AddBookingProcessingMetadata : Migration
 {

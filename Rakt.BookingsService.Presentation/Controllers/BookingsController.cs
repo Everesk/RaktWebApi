@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Rakt.BookingsService.Application;
@@ -92,7 +93,8 @@ public sealed class BookingsController(BookingService bookings) : ApiControllerB
     /// </summary>
     private bool TryGetUserId(out Guid userId)
     {
-        var subject = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        var subject = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+            ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         return Guid.TryParse(subject, out userId);
     }

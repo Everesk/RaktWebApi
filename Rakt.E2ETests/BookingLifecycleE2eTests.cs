@@ -39,7 +39,7 @@ public sealed class BookingLifecycleE2eTests(MicroservicesE2eFixture fixture)
                 var booking = await response.Content.ReadFromJsonAsync<JsonElement>();
 
                 return response.IsSuccessStatusCode
-                    && booking.GetProperty("status").GetString() == "Confirmed";
+                    && booking.GetProperty("status").GetInt32() == 1;
             },
             "Бронь не была подтверждена в ожидаемый срок.");
 

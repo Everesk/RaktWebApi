@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Confluent.Kafka;
+using Confluent.Kafka.Admin;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Rakt.BookingsService.Domain;
@@ -81,6 +82,8 @@ public sealed class BookingsServiceIntegrationTests(BookingsIntegrationFixture f
     [Fact]
     public async Task KafkaPublisher_PublishesBookingConfirmedWithEventIdKey()
     {
+        await CreateConfirmedTopicAsync();
+
         var consumerConfiguration = new ConsumerConfig
         {
             BootstrapServers = fixture.KafkaBootstrapServers,
@@ -117,6 +120,34 @@ public sealed class BookingsServiceIntegrationTests(BookingsIntegrationFixture f
         Assert.Equal(bookingConfirmed.BookingId, payload.BookingId);
         Assert.Equal(bookingConfirmed.EventId, payload.EventId);
         Assert.Equal(bookingConfirmed.UserId, payload.UserId);
+    }
+
+    /// <summary>
+    /// Создаёт топик подтверждённых броней для изолированной проверки издателя.
+    /// </summary>
+    private async Task CreateConfirmedTopicAsync()
+    {
+        using var adminClient = new AdminClientBuilder(new AdminClientConfig
+        {
+            BootstrapServers = fixture.KafkaBootstrapServers
+        }).Build();
+
+        try
+        {
+            await adminClient.CreateTopicsAsync(
+            [
+                new TopicSpecification
+                {
+                    Name = BookingTopics.Confirmed,
+                    NumPartitions = 1,
+                    ReplicationFactor = 1
+                }
+            ]);
+        }
+        catch (CreateTopicsException exception) when (
+            exception.Results.All(result => result.Error.Code == ErrorCode.TopicAlreadyExists))
+        {
+        }
     }
 
     /// <summary>

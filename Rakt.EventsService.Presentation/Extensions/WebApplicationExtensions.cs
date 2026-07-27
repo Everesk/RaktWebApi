@@ -9,10 +9,7 @@ public static class WebApplicationExtensions
     /// <summary>Применяет миграции, middleware и маршруты контроллеров.</summary>
     public static WebApplication UseStandardConfiguration(this WebApplication app)
     {
-        using var scope = app.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<EventsDbContext>();
-
-        dbContext.Database.Migrate();
+        ApplyDatabaseMigrations(app);
 
         app.UseSerilogRequestLogging();
         app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -39,5 +36,25 @@ public static class WebApplicationExtensions
         app.MapControllers();
 
         return app;
+    }
+
+    /// <summary>
+    /// Применяет миграции базы данных событий и фиксирует результат в журнале.
+    /// </summary>
+    private static void ApplyDatabaseMigrations(WebApplication app)
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<EventsDbContext>();
+
+            dbContext.Database.Migrate();
+            Log.Information("Миграции базы данных событий успешно применены");
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Не удалось применить миграции базы данных событий");
+            throw;
+        }
     }
 }

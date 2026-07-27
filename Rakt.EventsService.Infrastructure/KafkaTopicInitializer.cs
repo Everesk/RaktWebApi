@@ -8,14 +8,14 @@ using Rakt.Contracts.Messaging;
 namespace Rakt.EventsService.Infrastructure;
 
 /// <summary>
-/// Создаёт топик подтверждённых броней до запуска его потребителя.
+/// Создаёт топики, потребляемые сервисом событий, до запуска подписчиков.
 /// </summary>
 public sealed class KafkaTopicInitializer(
     IOptions<KafkaOptions> options,
     ILogger<KafkaTopicInitializer> logger) : IHostedService
 {
     /// <summary>
-    /// Создаёт топик, если он ещё отсутствует, не прерывая запуск при ошибке Kafka.
+    /// Создаёт отсутствующие топики, не прерывая запуск при ошибке Kafka.
     /// </summary>
     /// <param name="cancellationToken">Токен отмены запуска приложения.</param>
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -25,28 +25,9 @@ public sealed class KafkaTopicInitializer(
             BootstrapServers = options.Value.BootstrapServers
         }).Build();
 
-        try
+        foreach (var topicName in GetTopicNames())
         {
-            await adminClient.CreateTopicsAsync(
-                [new TopicSpecification
-                {
-                    Name = BookingTopics.Confirmed,
-                    NumPartitions = 1,
-                    ReplicationFactor = 1
-                }]);
-
-            logger.LogInformation("Создан Kafka-топик {TopicName}", BookingTopics.Confirmed);
-        }
-        catch (CreateTopicsException exception) when (IsTopicAlreadyExists(exception))
-        {
-            logger.LogDebug("Kafka-топик {TopicName} уже существует", BookingTopics.Confirmed);
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning(
-                exception,
-                "Не удалось создать Kafka-топик {TopicName}. Подписчик продолжит запуск.",
-                BookingTopics.Confirmed);
+            await CreateTopicAsync(adminClient, topicName);
         }
     }
 
@@ -57,6 +38,44 @@ public sealed class KafkaTopicInitializer(
     public Task StopAsync(CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Возвращает имена топиков, на которые подписан сервис событий.
+    /// </summary>
+    private static IReadOnlyCollection<string> GetTopicNames()
+    {
+        return [BookingTopics.Confirmed, BookingTopics.Cancelled];
+    }
+
+    /// <summary>
+    /// Создаёт один Kafka-топик или фиксирует, что он уже существует.
+    /// </summary>
+    private async Task CreateTopicAsync(IAdminClient adminClient, string topicName)
+    {
+        try
+        {
+            await adminClient.CreateTopicsAsync(
+                [new TopicSpecification
+                {
+                    Name = topicName,
+                    NumPartitions = 1,
+                    ReplicationFactor = 1
+                }]);
+
+            logger.LogInformation("Создан Kafka-топик {TopicName}", topicName);
+        }
+        catch (CreateTopicsException exception) when (IsTopicAlreadyExists(exception))
+        {
+            logger.LogDebug("Kafka-топик {TopicName} уже существует", topicName);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Не удалось создать Kafka-топик {TopicName}. Подписчик продолжит запуск.",
+                topicName);
+        }
     }
 
     /// <summary>
