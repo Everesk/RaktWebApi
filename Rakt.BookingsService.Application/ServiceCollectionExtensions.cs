@@ -8,6 +8,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<BookingService>();
         services.AddScoped<BookingConfirmationService>();
+        services.AddSingleton<IBookingProcessingState, BookingProcessingState>();
+        services.AddScoped<IBookingProcessingService, BookingProcessingService>();
 
         return services;
     }

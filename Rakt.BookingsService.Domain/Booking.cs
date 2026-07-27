@@ -13,6 +13,12 @@ public sealed class Booking
     public Guid EventId { get; private set; }
     /// <summary>Статус брони.</summary>
     public BookingStatus Status { get; private set; } = BookingStatus.Pending;
+
+    /// <summary>Момент создания брони.</summary>
+    public DateTimeOffset CreatedAt { get; private set; }
+
+    /// <summary>Момент подтверждения или отклонения брони.</summary>
+    public DateTimeOffset? ProcessedAt { get; private set; }
     private Booking()
     {
     }
@@ -27,15 +33,27 @@ public sealed class Booking
     {
         return new Booking(userId, eventId);
     }
-    /// <summary>Подтверждает бронь после ответа сервиса событий.</summary>
-    public void Confirm()
+    /// <summary>Подтверждает бронь после фоновой обработки.</summary>
+    /// <param name="processedAt">Момент подтверждения.</param>
+    public void Confirm(DateTimeOffset processedAt)
     {
         Status = BookingStatus.Confirmed;
+        ProcessedAt = processedAt;
     }
-    /// <summary>Отклоняет бронь после отказа сервиса событий.</summary>
-    public void Reject()
+
+    /// <summary>Отклоняет бронь после исчерпания попыток обработки.</summary>
+    /// <param name="processedAt">Момент отклонения.</param>
+    public void Reject(DateTimeOffset processedAt)
     {
         Status = BookingStatus.Rejected;
+        ProcessedAt = processedAt;
+    }
+
+    /// <summary>Возвращает бронь в ожидание после временной ошибки публикации.</summary>
+    public void ReturnToPending()
+    {
+        Status = BookingStatus.Pending;
+        ProcessedAt = null;
     }
     /// <summary>Отменяет активную бронь.</summary>
     public void Cancel()

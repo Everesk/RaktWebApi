@@ -14,7 +14,7 @@ public sealed class BookingConfirmationService(
         var booking = await bookings.GetAsync(bookingId, cancellationToken)
             ?? throw new NotFoundException($"Бронь с идентификатором '{bookingId}' не найдена.");
 
-        booking.Confirm();
+        booking.Confirm(DateTimeOffset.UtcNow);
 
         await bookings.SaveChangesAsync(cancellationToken);
 
