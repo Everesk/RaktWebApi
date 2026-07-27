@@ -45,7 +45,13 @@ public sealed class KafkaTopicInitializer(
     /// </summary>
     private static IReadOnlyCollection<string> GetTopicNames()
     {
-        return [BookingTopics.Confirmed, BookingTopics.Cancelled];
+        return
+        [
+            BookingTopics.Requested,
+            BookingTopics.Cancelled,
+            BookingTopics.SeatsReserved,
+            BookingTopics.SeatsReservationRejected
+        ];
     }
 
     /// <summary>

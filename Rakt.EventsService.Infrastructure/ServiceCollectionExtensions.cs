@@ -16,8 +16,11 @@ public static class ServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
         services.AddScoped<IEventRepository, EventRepository>();
+        services.AddSingleton<KafkaSeatsReservationPublisher>();
+        services.AddSingleton<ISeatsReservationPublisher>(serviceProvider =>
+            serviceProvider.GetRequiredService<KafkaSeatsReservationPublisher>());
         services.AddHostedService<KafkaTopicInitializer>();
-        services.AddHostedService<BookingConfirmedConsumer>();
+        services.AddHostedService<BookingRequestedConsumer>();
         services.AddHostedService<BookingCancelledConsumer>();
 
         return services;

@@ -27,18 +27,6 @@ public sealed class BookingRepository(BookingsDbContext db) : IBookingRepository
     }
 
     /// <summary>
-    /// Возвращает идентификаторы броней, которые ожидают подтверждения.
-    /// </summary>
-    public async Task<IReadOnlyCollection<Guid>> GetPendingIdsAsync(CancellationToken ct = default)
-    {
-        return await db.Bookings
-            .AsNoTracking()
-            .Where(booking => booking.Status == BookingStatus.Pending)
-            .Select(booking => booking.Id)
-            .ToListAsync(ct);
-    }
-
-    /// <summary>
     /// Добавляет бронь в контекст данных.
     /// </summary>
     public Task AddAsync(Booking booking, CancellationToken ct = default)

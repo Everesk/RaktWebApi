@@ -28,7 +28,9 @@ public sealed class BookingCancelledConsumer(
             BootstrapServers = options.Value.BootstrapServers,
             GroupId = options.Value.ConsumerGroup,
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = false
+            EnableAutoCommit = false,
+            SessionTimeoutMs = 6000,
+            HeartbeatIntervalMs = 2000
         };
         using var consumer = new ConsumerBuilder<string, string>(configuration).Build();
         consumer.Subscribe(BookingTopics.Cancelled);

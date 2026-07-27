@@ -68,11 +68,15 @@ public sealed class BookingService(IBookingRepository bookings, IBookingMessageP
             throw new OperationForbiddenException("Недостаточно прав для отмены этого бронирования.");
         }
 
+        var shouldReleaseSeat = booking.Status is BookingStatus.Pending or BookingStatus.Confirmed;
         booking.Cancel();
 
         await bookings.SaveChangesAsync(ct);
-        await publisher.PublishAsync(
-            new BookingCancelled(booking.Id, booking.EventId, DateTimeOffset.UtcNow),
-            ct);
+        if (shouldReleaseSeat)
+        {
+            await publisher.PublishAsync(
+                new BookingCancelled(booking.Id, booking.EventId, DateTimeOffset.UtcNow),
+                ct);
+        }
     }
 }

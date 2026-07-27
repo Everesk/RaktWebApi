@@ -77,12 +77,12 @@ public sealed class BookingsServiceIntegrationTests(BookingsIntegrationFixture f
     }
 
     /// <summary>
-    /// Проверяет публикацию подтверждения брони в Kafka с ключом идентификатора события.
+    /// Проверяет публикацию запроса брони в Kafka с ключом идентификатора события.
     /// </summary>
     [Fact]
-    public async Task KafkaPublisher_PublishesBookingConfirmedWithEventIdKey()
+    public async Task KafkaPublisher_PublishesBookingRequestedWithEventIdKey()
     {
-        await CreateConfirmedTopicAsync();
+        await CreateRequestedTopicAsync();
 
         var consumerConfiguration = new ConsumerConfig
         {
@@ -92,40 +92,39 @@ public sealed class BookingsServiceIntegrationTests(BookingsIntegrationFixture f
             EnableAutoCommit = false
         };
         using var consumer = new ConsumerBuilder<string, string>(consumerConfiguration).Build();
-        consumer.Subscribe(BookingTopics.Confirmed);
+        consumer.Subscribe(BookingTopics.Requested);
 
-        using var publisher = new KafkaBookingConfirmedPublisher(
+        using var publisher = new KafkaBookingMessagePublisher(
             Options.Create(new KafkaOptions
             {
                 BootstrapServers = fixture.KafkaBootstrapServers
             }));
-        var bookingConfirmed = new BookingConfirmed(
+        var bookingRequested = new BookingRequested(
             Guid.NewGuid(),
             Guid.NewGuid(),
             Guid.NewGuid(),
-            SeatsCount: 1,
-            ConfirmedAt: DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow);
 
-        await publisher.PublishAsync(bookingConfirmed);
+        await publisher.PublishAsync(bookingRequested);
 
         using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var consumedMessage = await ConsumeMessageAsync(
             consumer,
-            bookingConfirmed.BookingId,
+            bookingRequested.BookingId,
             cancellationTokenSource.Token);
-        var payload = JsonSerializer.Deserialize<BookingConfirmed>(consumedMessage.Message.Value);
+        var payload = JsonSerializer.Deserialize<BookingRequested>(consumedMessage.Message.Value);
 
-        Assert.Equal(bookingConfirmed.EventId.ToString(), consumedMessage.Message.Key);
+        Assert.Equal(bookingRequested.EventId.ToString(), consumedMessage.Message.Key);
         Assert.NotNull(payload);
-        Assert.Equal(bookingConfirmed.BookingId, payload.BookingId);
-        Assert.Equal(bookingConfirmed.EventId, payload.EventId);
-        Assert.Equal(bookingConfirmed.UserId, payload.UserId);
+        Assert.Equal(bookingRequested.BookingId, payload.BookingId);
+        Assert.Equal(bookingRequested.EventId, payload.EventId);
+        Assert.Equal(bookingRequested.UserId, payload.UserId);
     }
 
     /// <summary>
-    /// Создаёт топик подтверждённых броней для изолированной проверки издателя.
+    /// Создаёт топик запросов брони для изолированной проверки издателя.
     /// </summary>
-    private async Task CreateConfirmedTopicAsync()
+    private async Task CreateRequestedTopicAsync()
     {
         using var adminClient = new AdminClientBuilder(new AdminClientConfig
         {
@@ -138,7 +137,7 @@ public sealed class BookingsServiceIntegrationTests(BookingsIntegrationFixture f
             [
                 new TopicSpecification
                 {
-                    Name = BookingTopics.Confirmed,
+                    Name = BookingTopics.Requested,
                     NumPartitions = 1,
                     ReplicationFactor = 1
                 }
@@ -161,7 +160,7 @@ public sealed class BookingsServiceIntegrationTests(BookingsIntegrationFixture f
         while (!cancellationToken.IsCancellationRequested)
         {
             var result = consumer.Consume(cancellationToken);
-            var payload = JsonSerializer.Deserialize<BookingConfirmed>(result.Message.Value);
+            var payload = JsonSerializer.Deserialize<BookingRequested>(result.Message.Value);
 
             if (payload?.BookingId == bookingId)
             {

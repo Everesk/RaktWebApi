@@ -11,7 +11,6 @@ namespace Rakt.BookingsService.Infrastructure;
 /// </summary>
 public sealed class KafkaBookingMessagePublisher :
     IBookingMessagePublisher,
-    IBookingConfirmedPublisher,
     IDisposable
 {
     private readonly IProducer<string, string> _producer;
@@ -44,14 +43,6 @@ public sealed class KafkaBookingMessagePublisher :
     public Task PublishAsync(BookingCancelled message, CancellationToken ct = default)
     {
         return PublishAsync(BookingTopics.Cancelled, message.EventId, message, ct);
-    }
-
-    /// <summary>
-    /// Публикует подтверждение брони.
-    /// </summary>
-    public Task PublishAsync(BookingConfirmed message, CancellationToken cancellationToken = default)
-    {
-        return PublishAsync(BookingTopics.Confirmed, message.EventId, message, cancellationToken);
     }
 
     /// <summary>

@@ -8,4 +8,7 @@ public sealed class KafkaOptions
 
     /// <summary>Адреса брокеров Kafka.</summary>
     public string BootstrapServers { get; init; } = string.Empty;
+
+    /// <summary>Имя группы потребителей результатов резервирования.</summary>
+    public string ConsumerGroup { get; init; } = string.Empty;
 }

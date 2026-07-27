@@ -33,7 +33,7 @@ public sealed class Booking
     {
         return new Booking(userId, eventId);
     }
-    /// <summary>Подтверждает бронь после фоновой обработки.</summary>
+    /// <summary>Подтверждает бронь после успешного резервирования места.</summary>
     /// <param name="processedAt">Момент подтверждения.</param>
     public void Confirm(DateTimeOffset processedAt)
     {
@@ -41,7 +41,7 @@ public sealed class Booking
         ProcessedAt = processedAt;
     }
 
-    /// <summary>Отклоняет бронь после исчерпания попыток обработки.</summary>
+    /// <summary>Отклоняет бронь после отказа в резервировании места.</summary>
     /// <param name="processedAt">Момент отклонения.</param>
     public void Reject(DateTimeOffset processedAt)
     {
@@ -49,12 +49,6 @@ public sealed class Booking
         ProcessedAt = processedAt;
     }
 
-    /// <summary>Возвращает бронь в ожидание после временной ошибки публикации.</summary>
-    public void ReturnToPending()
-    {
-        Status = BookingStatus.Pending;
-        ProcessedAt = null;
-    }
     /// <summary>Отменяет активную бронь.</summary>
     public void Cancel()
     {

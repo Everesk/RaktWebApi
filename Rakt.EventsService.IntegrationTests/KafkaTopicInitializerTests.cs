@@ -13,10 +13,10 @@ namespace Rakt.EventsService.IntegrationTests;
 public sealed class KafkaTopicInitializerTests(KafkaFixture fixture) : IClassFixture<KafkaFixture>
 {
     /// <summary>
-    /// Инициализатор должен создавать оба топика, потребляемые сервисом событий.
+    /// Инициализатор должен создавать топики команд и результатов бронирования.
     /// </summary>
     [Fact]
-    public async Task StartAsync_CreatesConfirmedAndCancelledTopics()
+    public async Task StartAsync_CreatesBookingWorkflowTopics()
     {
         var initializer = new KafkaTopicInitializer(
             Options.Create(new KafkaOptions
@@ -34,15 +34,17 @@ public sealed class KafkaTopicInitializerTests(KafkaFixture fixture) : IClassFix
         }).Build();
         var metadata = adminClient.GetMetadata(TimeSpan.FromSeconds(10));
 
-        Assert.Contains(metadata.Topics, topic => topic.Topic == BookingTopics.Confirmed);
+        Assert.Contains(metadata.Topics, topic => topic.Topic == BookingTopics.Requested);
         Assert.Contains(metadata.Topics, topic => topic.Topic == BookingTopics.Cancelled);
+        Assert.Contains(metadata.Topics, topic => topic.Topic == BookingTopics.SeatsReserved);
+        Assert.Contains(metadata.Topics, topic => topic.Topic == BookingTopics.SeatsReservationRejected);
     }
 
     /// <summary>
-    /// После инициализации Kafka должна доставлять подтверждённое сообщение потребителю.
+    /// После инициализации Kafka должна доставлять запрос брони потребителю.
     /// </summary>
     [Fact]
-    public async Task InitializedTopic_DeliversBookingConfirmedMessage()
+    public async Task InitializedTopic_DeliversBookingRequestedMessage()
     {
         var initializer = new KafkaTopicInitializer(
             Options.Create(new KafkaOptions
@@ -60,7 +62,7 @@ public sealed class KafkaTopicInitializerTests(KafkaFixture fixture) : IClassFix
             AutoOffsetReset = AutoOffsetReset.Earliest
         };
         using var consumer = new ConsumerBuilder<string, string>(consumerConfiguration).Build();
-        consumer.Subscribe(BookingTopics.Confirmed);
+        consumer.Subscribe(BookingTopics.Requested);
         using var producer = new ProducerBuilder<string, string>(new ProducerConfig
         {
             BootstrapServers = fixture.BootstrapServers
@@ -68,7 +70,7 @@ public sealed class KafkaTopicInitializerTests(KafkaFixture fixture) : IClassFix
         var bookingId = Guid.NewGuid();
 
         await producer.ProduceAsync(
-            BookingTopics.Confirmed,
+            BookingTopics.Requested,
             new Message<string, string>
             {
                 Key = Guid.NewGuid().ToString(),

@@ -40,19 +40,6 @@ internal sealed class InMemoryBookingRepository : IBookingRepository
     }
 
     /// <summary>
-    /// Возвращает идентификаторы броней в статусе ожидания.
-    /// </summary>
-    public Task<IReadOnlyCollection<Guid>> GetPendingIdsAsync(CancellationToken ct = default)
-    {
-        IReadOnlyCollection<Guid> pendingBookingIds = _bookings.Values
-            .Where(booking => booking.Status == BookingStatus.Pending)
-            .Select(booking => booking.Id)
-            .ToArray();
-
-        return Task.FromResult(pendingBookingIds);
-    }
-
-    /// <summary>
     /// Добавляет бронь в тестовое хранилище.
     /// </summary>
     public Task AddAsync(Booking booking, CancellationToken ct = default)

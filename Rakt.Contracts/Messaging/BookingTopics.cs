@@ -10,4 +10,10 @@ public static class BookingTopics
 
     /// <summary>Топик с подтверждёнными бронями.</summary>
     public const string Confirmed = "booking-confirmed";
+
+    /// <summary>Топик успешных резервирований мест сервисом событий.</summary>
+    public const string SeatsReserved = "seats-reserved";
+
+    /// <summary>Топик отказов в резервировании мест сервисом событий.</summary>
+    public const string SeatsReservationRejected = "seats-reservation-rejected";
 }

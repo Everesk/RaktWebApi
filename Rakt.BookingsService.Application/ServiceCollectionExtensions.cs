@@ -7,9 +7,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddBookingsApplication(this IServiceCollection services)
     {
         services.AddScoped<BookingService>();
-        services.AddScoped<BookingConfirmationService>();
-        services.AddSingleton<IBookingProcessingState, BookingProcessingState>();
-        services.AddScoped<IBookingProcessingService, BookingProcessingService>();
+        services.AddScoped<BookingReservationResultService>();
 
         return services;
     }

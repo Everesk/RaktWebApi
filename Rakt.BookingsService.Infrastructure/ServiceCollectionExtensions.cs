@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Rakt.BookingsService.Application;
 namespace Rakt.BookingsService.Infrastructure;
 /// <summary>Расширения для регистрации infrastructure-слоя броней.</summary>
@@ -18,17 +17,11 @@ public static class ServiceCollectionExtensions
         });
 
         services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
-        services.AddOptions<BookingProcessingOptions>()
-            .Bind(configuration.GetSection(BookingProcessingOptions.SectionName))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddSingleton<KafkaBookingMessagePublisher>();
         services.AddSingleton<IBookingMessagePublisher>(serviceProvider =>
             serviceProvider.GetRequiredService<KafkaBookingMessagePublisher>());
-        services.AddSingleton<IBookingConfirmedPublisher>(serviceProvider =>
-            serviceProvider.GetRequiredService<KafkaBookingMessagePublisher>());
-        services.AddHostedService<BookingBackgroundService>();
+        services.AddHostedService<SeatsReservationResultConsumer>();
         return services;
     }
 }

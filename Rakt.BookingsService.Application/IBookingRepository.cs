@@ -14,11 +14,6 @@ public interface IBookingRepository
     Task<IReadOnlyCollection<Booking>> GetByEventIdAsync(Guid eventId, CancellationToken ct = default);
 
     /// <summary>
-    /// Возвращает идентификаторы броней, ожидающих фоновой обработки.
-    /// </summary>
-    Task<IReadOnlyCollection<Guid>> GetPendingIdsAsync(CancellationToken ct = default);
-
-    /// <summary>
     /// Добавляет новую бронь в хранилище.
     /// </summary>
     Task AddAsync(Booking booking, CancellationToken ct = default);
