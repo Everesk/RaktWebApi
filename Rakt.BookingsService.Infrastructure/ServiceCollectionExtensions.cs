@@ -23,7 +23,11 @@ public static class ServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
         services.AddScoped<IBookingRepository, BookingRepository>();
-        services.AddSingleton<IBookingConfirmedPublisher, KafkaBookingConfirmedPublisher>();
+        services.AddSingleton<KafkaBookingMessagePublisher>();
+        services.AddSingleton<IBookingMessagePublisher>(serviceProvider =>
+            serviceProvider.GetRequiredService<KafkaBookingMessagePublisher>());
+        services.AddSingleton<IBookingConfirmedPublisher>(serviceProvider =>
+            serviceProvider.GetRequiredService<KafkaBookingMessagePublisher>());
         services.AddHostedService<BookingBackgroundService>();
         return services;
     }
