@@ -17,16 +17,8 @@ public sealed class BookingLifecycleE2eTests(MicroservicesE2eFixture fixture)
     [Fact]
     public async Task BookingLifecycle_ConfirmsBookingReservesAndReleasesEventSeat()
     {
-        var administratorToken = await RegisterAndLoginAsync(
-            fixture.UsersBaseAddress,
-            "e2e-admin",
-            "Password123!",
-            role: 1);
-        var userToken = await RegisterAndLoginAsync(
-            fixture.UsersBaseAddress,
-            "e2e-user",
-            "Password123!",
-            role: 0);
+        var administratorToken = await CreateUserTokenAsync(role: 1);
+        var userToken = await CreateUserTokenAsync(role: 0);
         var eventId = await CreateEventAsync(administratorToken);
 
         var bookingId = await CreateBookingAsync(eventId, userToken);
@@ -56,6 +48,66 @@ public sealed class BookingLifecycleE2eTests(MicroservicesE2eFixture fixture)
         await WaitUntilAsync(
             async () => await GetAvailableSeatsAsync(eventId) == 2,
             "Сервис событий не вернул место после отмены брони.");
+    }
+
+    /// <summary>
+    /// Не допускает подтверждения большего числа броней, чем мест на событии.
+    /// </summary>
+    [Fact]
+    public async Task ConcurrentBookings_DoNotOverbookEvent()
+    {
+        var administratorToken = await CreateUserTokenAsync(role: 1);
+        var eventId = await CreateEventAsync(administratorToken, totalSeats: 2);
+        var userTokens = new List<string>();
+
+        for (var index = 0; index < 5; index++)
+        {
+            userTokens.Add(await CreateUserTokenAsync(role: 0));
+        }
+
+        var bookingIds = await Task.WhenAll(
+            userTokens.Select(userToken => CreateBookingAsync(eventId, userToken)));
+
+        await WaitUntilAsync(
+            async () =>
+            {
+                var statuses = await Task.WhenAll(
+                    bookingIds.Select(bookingId => GetBookingStatusAsync(bookingId, userTokens[Array.IndexOf(bookingIds, bookingId)])));
+
+                return statuses.All(status => status is 1 or 2);
+            },
+            "Не все конкурентные брони получили итоговый статус.");
+
+        var finalStatuses = await Task.WhenAll(
+            bookingIds.Select(bookingId => GetBookingStatusAsync(bookingId, userTokens[Array.IndexOf(bookingIds, bookingId)])));
+
+        Assert.Equal(2, finalStatuses.Count(status => status == 1));
+        Assert.Equal(3, finalStatuses.Count(status => status == 2));
+        Assert.Equal(0, await GetAvailableSeatsAsync(eventId));
+    }
+
+    /// <summary>
+    /// Возвращает место после отмены, даже если отмена поступила в Events раньше запроса брони.
+    /// </summary>
+    [Fact]
+    public async Task ImmediateCancellation_DoesNotKeepEventSeatReserved()
+    {
+        var administratorToken = await CreateUserTokenAsync(role: 1);
+        var userToken = await CreateUserTokenAsync(role: 0);
+        var eventId = await CreateEventAsync(administratorToken, totalSeats: 1);
+        var bookingId = await CreateBookingAsync(eventId, userToken);
+
+        using (var client = CreateAuthorizedClient(fixture.BookingsBaseAddress, userToken))
+        {
+            using var response = await client.DeleteAsync($"bookings/{bookingId}");
+            response.EnsureSuccessStatusCode();
+        }
+
+        await WaitUntilAsync(
+            async () => await GetAvailableSeatsAsync(eventId) == 1,
+            "Сервис событий удерживает место отменённой брони.");
+
+        Assert.Equal(3, await GetBookingStatusAsync(bookingId, userToken));
     }
 
     /// <summary>
@@ -92,9 +144,21 @@ public sealed class BookingLifecycleE2eTests(MicroservicesE2eFixture fixture)
     }
 
     /// <summary>
+    /// Регистрирует уникального тестового пользователя и возвращает его JWT-токен.
+    /// </summary>
+    private Task<string> CreateUserTokenAsync(int role)
+    {
+        return RegisterAndLoginAsync(
+            fixture.UsersBaseAddress,
+            $"e2e-{Guid.NewGuid():N}",
+            "Password123!",
+            role);
+    }
+
+    /// <summary>
     /// Создаёт событие от имени администратора.
     /// </summary>
-    private async Task<Guid> CreateEventAsync(string administratorToken)
+    private async Task<Guid> CreateEventAsync(string administratorToken, int totalSeats = 2)
     {
         using var client = CreateAuthorizedClient(fixture.EventsBaseAddress, administratorToken);
         using var response = await client.PostAsJsonAsync("events", new
@@ -103,7 +167,7 @@ public sealed class BookingLifecycleE2eTests(MicroservicesE2eFixture fixture)
             Description = "Проверка полного цикла",
             StartAt = DateTimeOffset.UtcNow.AddDays(1),
             EndAt = DateTimeOffset.UtcNow.AddDays(1).AddHours(2),
-            TotalSeats = 2
+            TotalSeats = totalSeats
         });
         response.EnsureSuccessStatusCode();
         var eventInfo = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -141,6 +205,19 @@ public sealed class BookingLifecycleE2eTests(MicroservicesE2eFixture fixture)
         var eventInfo = await response.Content.ReadFromJsonAsync<JsonElement>();
 
         return eventInfo.GetProperty("availableSeats").GetInt32();
+    }
+
+    /// <summary>
+    /// Возвращает числовой статус брони из API броней.
+    /// </summary>
+    private async Task<int> GetBookingStatusAsync(Guid bookingId, string userToken)
+    {
+        using var client = CreateAuthorizedClient(fixture.BookingsBaseAddress, userToken);
+        using var response = await client.GetAsync($"bookings/{bookingId}");
+        response.EnsureSuccessStatusCode();
+        var booking = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        return booking.GetProperty("status").GetInt32();
     }
 
     /// <summary>

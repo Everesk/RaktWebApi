@@ -22,6 +22,25 @@ namespace Rakt.EventsService.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Rakt.EventsService.Domain.BookingSeatReservation", b =>
+                {
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsCancelled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsSeatReserved")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("BookingId");
+
+                    b.ToTable("booking_seat_reservations", (string)null);
+                });
+
             modelBuilder.Entity("Rakt.EventsService.Domain.Event", b =>
                 {
                     b.Property<Guid>("Id")

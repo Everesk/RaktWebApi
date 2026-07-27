@@ -29,7 +29,7 @@ public sealed class EventsServiceIntegrationTests(EventsPostgreSqlFixture fixtur
     }
 
     /// <summary>
-    /// Проверяет применение обеих миграций и состав таблицы событий.
+    /// Проверяет применение миграций и состав таблиц сервиса событий.
     /// </summary>
     [Fact]
     public async Task Migrations_CreateEventsTableWithDetailsColumns()
@@ -40,7 +40,7 @@ public sealed class EventsServiceIntegrationTests(EventsPostgreSqlFixture fixtur
             .SqlQueryRaw<string>("SELECT column_name AS \"Value\" FROM information_schema.columns WHERE table_name = 'events'")
             .ToListAsync();
 
-        Assert.Equal(2, appliedMigrations.Count());
+        Assert.Equal(3, appliedMigrations.Count());
         Assert.Contains("Description", columns);
         Assert.Contains("EndAt", columns);
         Assert.Contains("AvailableSeats", columns);

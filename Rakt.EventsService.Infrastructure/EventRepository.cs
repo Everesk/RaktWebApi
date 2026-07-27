@@ -36,7 +36,11 @@ public sealed class EventRepository(EventsDbContext db) : IEventRepository
     public Task<Event?> GetAsync(Guid id, CancellationToken ct = default) => db.Events.SingleOrDefaultAsync(x => x.Id == id, ct);
 
     public Task<Event?> GetForUpdateAsync(Guid id, CancellationToken ct = default) => db.Events.SingleOrDefaultAsync(x => x.Id == id, ct);
+    public Task<BookingSeatReservation?> GetReservationAsync(Guid bookingId, CancellationToken ct = default) =>
+        db.BookingSeatReservations.SingleOrDefaultAsync(reservation => reservation.BookingId == bookingId, ct);
     public Task AddAsync(Event entity, CancellationToken ct = default) => db.Events.AddAsync(entity, ct).AsTask();
+    public Task AddReservationAsync(BookingSeatReservation reservation, CancellationToken ct = default) =>
+        db.BookingSeatReservations.AddAsync(reservation, ct).AsTask();
     public Task SaveChangesAsync(CancellationToken ct = default) => db.SaveChangesAsync(ct);
 
     public Task DeleteAsync(Event entity, CancellationToken ct = default)

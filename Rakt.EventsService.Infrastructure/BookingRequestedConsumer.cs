@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Rakt.Contracts.Messaging;
 using Rakt.EventsService.Application;
+using Rakt.EventsService.Domain;
 
 namespace Rakt.EventsService.Infrastructure;
 
@@ -53,6 +54,17 @@ public sealed class BookingRequestedConsumer(
                         "Топик запросов брони ещё недоступен. Повторная попытка будет выполнена позже.");
                     await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
                 }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    logger.LogError(
+                        exception,
+                        "Не удалось идемпотентно обработать запрос брони. Сообщение будет прочитано повторно.");
+                    await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
+                }
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -81,6 +93,25 @@ public sealed class BookingRequestedConsumer(
         await using var scope = scopeFactory.CreateAsyncScope();
         var repository = scope.ServiceProvider.GetRequiredService<IEventRepository>();
         var publisher = scope.ServiceProvider.GetRequiredService<ISeatsReservationPublisher>();
+        var reservation = await repository.GetReservationAsync(request.BookingId, cancellationToken);
+        if (reservation?.IsCancelled == true)
+        {
+            logger.LogInformation(
+                "Пропущен запрос отменённой брони {BookingId}",
+                request.BookingId);
+
+            return;
+        }
+
+        if (reservation?.IsSeatReserved == true)
+        {
+            await publisher.PublishAsync(
+                new SeatsReserved(request.BookingId, request.EventId, DateTimeOffset.UtcNow),
+                cancellationToken);
+
+            return;
+        }
+
         var eventEntity = await repository.GetForUpdateAsync(request.EventId, cancellationToken);
 
         if (eventEntity is null)
@@ -109,6 +140,9 @@ public sealed class BookingRequestedConsumer(
             return;
         }
 
+        await repository.AddReservationAsync(
+            BookingSeatReservation.CreateReserved(request.BookingId, request.EventId),
+            cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
         await publisher.PublishAsync(
             new SeatsReserved(request.BookingId, request.EventId, DateTimeOffset.UtcNow),

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Rakt.Contracts.Messaging;
 using Rakt.EventsService.Application;
+using Rakt.EventsService.Domain;
 
 namespace Rakt.EventsService.Infrastructure;
 
@@ -92,9 +93,33 @@ public sealed class BookingCancelledConsumer(
 
         await using var scope = scopeFactory.CreateAsyncScope();
         var repository = scope.ServiceProvider.GetRequiredService<IEventRepository>();
+        var reservation = await repository.GetReservationAsync(bookingCancelled.BookingId, cancellationToken);
+        if (reservation is null)
+        {
+            await repository.AddReservationAsync(
+                BookingSeatReservation.CreateCancelled(bookingCancelled.BookingId, bookingCancelled.EventId),
+                cancellationToken);
+            await repository.SaveChangesAsync(cancellationToken);
+            logger.LogInformation(
+                "Зафиксирована отмена брони {BookingId} до резервирования места",
+                bookingCancelled.BookingId);
+
+            return;
+        }
+
+        if (!reservation.Cancel())
+        {
+            logger.LogInformation(
+                "Повторная отмена брони {BookingId} проигнорирована",
+                bookingCancelled.BookingId);
+
+            return;
+        }
+
         var eventEntity = await repository.GetForUpdateAsync(bookingCancelled.EventId, cancellationToken);
         if (eventEntity is null)
         {
+            await repository.SaveChangesAsync(cancellationToken);
             logger.LogWarning(
                 "Пропущена отмена брони {BookingId}: событие {EventId} не найдено",
                 bookingCancelled.BookingId,

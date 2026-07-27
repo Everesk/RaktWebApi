@@ -9,7 +9,17 @@ public interface IEventRepository
 
     Task<Event?> GetForUpdateAsync(Guid id, CancellationToken ct = default);
 
+    /// <summary>
+    /// Возвращает запись обработки брони по её идентификатору.
+    /// </summary>
+    Task<BookingSeatReservation?> GetReservationAsync(Guid bookingId, CancellationToken ct = default);
+
     Task AddAsync(Event entity, CancellationToken ct = default);
+
+    /// <summary>
+    /// Добавляет запись обработки брони.
+    /// </summary>
+    Task AddReservationAsync(BookingSeatReservation reservation, CancellationToken ct = default);
 
     Task SaveChangesAsync(CancellationToken ct = default);
 

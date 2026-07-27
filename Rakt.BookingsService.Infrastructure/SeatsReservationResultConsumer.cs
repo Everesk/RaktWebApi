@@ -53,6 +53,17 @@ public sealed class SeatsReservationResultConsumer(
                         "Топики результатов резервирования ещё недоступны. Повторная попытка будет выполнена позже.");
                     await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
                 }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    logger.LogError(
+                        exception,
+                        "Не удалось обработать результат резервирования. Сообщение будет прочитано повторно.");
+                    await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
+                }
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
