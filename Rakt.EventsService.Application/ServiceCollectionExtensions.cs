@@ -7,6 +7,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddEventsApplication(this IServiceCollection services)
     {
         services.AddScoped<EventSeatsService>();
+        services.AddScoped<IEventService, EventService>();
 
         return services;
     }
