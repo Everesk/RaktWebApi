@@ -45,6 +45,8 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - users-db-data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d rakt_users"]
       interval: 5s
@@ -60,6 +62,8 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - events-db-data:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d rakt_events"]
       interval: 5s
@@ -75,6 +79,8 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - bookings-db-data:/var/lib/postgresql/data
+    ports:
+      - "5436:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d rakt_bookings"]
       interval: 5s

@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddHostedService<KafkaTopicInitializer>();
         services.AddHostedService<BookingConfirmedConsumer>();
+        services.AddHostedService<BookingCancelledConsumer>();
 
         return services;
     }
