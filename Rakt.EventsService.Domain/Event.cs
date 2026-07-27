@@ -1,5 +1,7 @@
 namespace Rakt.EventsService.Domain;
 
+using Rakt.EventsService.Domain.Exceptions;
+
 /// <summary>Событие и его остаток мест, принадлежащие сервису событий.</summary>
 public sealed class Event
 {
@@ -20,7 +22,11 @@ public sealed class Event
     }
     private Event(string title, DateTimeOffset startAt, int totalSeats)
     {
-        if (totalSeats <= 0) throw new ArgumentOutOfRangeException(nameof(totalSeats));
+        if (totalSeats <= 0)
+        {
+            throw new InvalidTotalSeatsException(
+                "Количество мест на событии должно быть больше нуля.");
+        }
         Title = title;
         StartAt = startAt;
         TotalSeats = totalSeats;

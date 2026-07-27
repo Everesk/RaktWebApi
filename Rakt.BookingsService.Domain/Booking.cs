@@ -1,5 +1,7 @@
 namespace Rakt.BookingsService.Domain;
 
+using Rakt.BookingsService.Domain.Exceptions;
+
 /// <summary>Бронь, хранящая только идентификаторы внешних агрегатов.</summary>
 public sealed class Booking
 {
@@ -40,7 +42,7 @@ public sealed class Booking
     {
         if (Status == BookingStatus.Cancelled)
         {
-            throw new InvalidOperationException("Бронь уже отменена.");
+            throw new BookingAlreadyCancelledException("Бронирование уже отменено.");
         }
 
         Status = BookingStatus.Cancelled;

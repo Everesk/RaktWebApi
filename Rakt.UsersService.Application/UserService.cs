@@ -1,4 +1,5 @@
 using Rakt.UsersService.Domain;
+using Rakt.UsersService.Domain.Exceptions;
 namespace Rakt.UsersService.Application;
 /// <summary>Реализация сценариев сервиса пользователей.</summary>
 public sealed class UserService(IUserRepository users, IPasswordHasher passwords, IJwtTokenGenerator tokens) : IUserService
@@ -8,7 +9,8 @@ public sealed class UserService(IUserRepository users, IPasswordHasher passwords
     {
         if (await users.FindByLoginAsync(command.Login, cancellationToken) is not null)
         {
-            throw new InvalidOperationException("Пользователь с таким логином уже существует.");
+            throw new UserAlreadyExistsException(
+                $"Пользователь с логином '{command.Login}' уже существует.");
         }
 
         var user = User.Create(command.Login, passwords.Hash(command.Password), command.Role);
@@ -23,7 +25,7 @@ public sealed class UserService(IUserRepository users, IPasswordHasher passwords
         var user = await users.FindByLoginAsync(command.Login, cancellationToken);
         if (user is null || !passwords.Verify(command.Password, user.PasswordHash))
         {
-            throw new UnauthorizedAccessException("Неверный логин или пароль.");
+            throw new InvalidCredentialsException("Неверный логин или пароль.");
         }
 
         return new(user.Id, tokens.Generate(user));

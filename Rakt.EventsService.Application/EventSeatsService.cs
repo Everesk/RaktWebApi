@@ -1,4 +1,6 @@
 namespace Rakt.EventsService.Application;
+
+using Rakt.EventsService.Domain.Exceptions;
 /// <summary>Сервис управления местами события.</summary>
 public sealed class EventSeatsService(IEventRepository events)
 {
@@ -6,7 +8,7 @@ public sealed class EventSeatsService(IEventRepository events)
     public async Task<bool> ReserveAsync(Guid eventId, CancellationToken ct = default)
     {
         var entity = await events.GetAsync(eventId, ct)
-            ?? throw new KeyNotFoundException("Событие не найдено.");
+            ?? throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
         var result = entity.TryReserveSeat();
 
         await events.SaveChangesAsync(ct);
@@ -17,7 +19,7 @@ public sealed class EventSeatsService(IEventRepository events)
     public async Task ReleaseAsync(Guid eventId, CancellationToken ct = default)
     {
         var entity = await events.GetAsync(eventId, ct)
-            ?? throw new KeyNotFoundException("Событие не найдено.");
+            ?? throw new NotFoundException($"Событие с идентификатором '{eventId}' не найдено.");
 
         entity.ReleaseSeat();
 

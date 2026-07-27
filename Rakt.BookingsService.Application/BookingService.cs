@@ -1,4 +1,5 @@
 using Rakt.BookingsService.Domain;
+using Rakt.BookingsService.Domain.Exceptions;
 using Rakt.Contracts.Messaging;
 namespace Rakt.BookingsService.Application;
 /// <summary>Сценарии создания и отмены броней.</summary>
@@ -21,7 +22,7 @@ public sealed class BookingService(IBookingRepository bookings, IBookingMessageP
     public async Task CancelAsync(Guid id, CancellationToken ct = default)
     {
         var booking = await bookings.GetAsync(id, ct)
-            ?? throw new KeyNotFoundException("Бронь не найдена.");
+            ?? throw new NotFoundException($"Бронь с идентификатором '{id}' не найдена.");
 
         booking.Cancel();
 
