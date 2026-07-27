@@ -1,10 +1,10 @@
-using Microsoft.EntityFrameworkCore;
 using Rakt.BookingsService.Application;
 using Rakt.BookingsService.Infrastructure;
+using Rakt.BookingsService.Presentation.Extensions;
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddDbContext<BookingsDbContext>(o => o.UseNpgsql(builder.Configuration.GetConnectionString("BookingsDatabase")));
-builder.Services.AddScoped<IBookingRepository, BookingRepository>(); builder.Services.AddScoped<BookingService>();
+builder.AddStandardConfiguration();
+builder.Services.AddBookingsApplication();
+builder.Services.AddBookingsInfrastructure(builder.Configuration);
 var app = builder.Build();
-app.MapGet("/health", () => Results.Ok());
+app.UseStandardConfiguration();
 app.Run();
-public partial class Program { }

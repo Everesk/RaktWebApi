@@ -1,10 +1,6 @@
 using Rakt.BookingsService.Domain;
 using Rakt.Contracts.Messaging;
 namespace Rakt.BookingsService.Application;
-/// <summary>Порт хранения броней.</summary>
-public interface IBookingRepository { Task<Booking?> GetAsync(Guid id, CancellationToken ct = default); Task AddAsync(Booking booking, CancellationToken ct = default); Task SaveChangesAsync(CancellationToken ct = default); }
-/// <summary>Порт публикации интеграционных событий.</summary>
-public interface IBookingMessagePublisher { Task PublishAsync(BookingRequested message, CancellationToken ct = default); Task PublishAsync(BookingCancelled message, CancellationToken ct = default); }
 /// <summary>Сценарии создания и отмены броней.</summary>
 public sealed class BookingService(IBookingRepository bookings, IBookingMessagePublisher publisher)
 {

@@ -1,8 +1,5 @@
 namespace Rakt.BookingsService.Domain;
 
-/// <summary>Состояние обработки бронирования.</summary>
-public enum BookingStatus { Pending, Confirmed, Rejected, Cancelled }
-
 /// <summary>Бронь, хранящая только идентификаторы внешних агрегатов.</summary>
 public sealed class Booking
 {

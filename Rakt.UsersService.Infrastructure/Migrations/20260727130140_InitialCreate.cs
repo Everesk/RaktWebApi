@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,7 +7,9 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Rakt.UsersService.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    [DbContext(typeof(UsersDbContext))]
+    [Migration("20260727130140_InitialCreate")]
+    public class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
