@@ -10,7 +10,9 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddBookingsInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<BookingsDbContext>(options => options.UseNpgsql(configuration.GetConnectionString("BookingsDatabase")));
+        services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddSingleton<IBookingConfirmedPublisher, KafkaBookingConfirmedPublisher>();
         return services;
     }
 }
