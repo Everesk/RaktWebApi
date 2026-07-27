@@ -12,7 +12,8 @@ public class BookingTests
     /// <summary>
     /// Проверяет, что бронирование при создании получает корректные значения по умолчанию без установки даты создания (этим теперь EF перехватчик занимается).
     /// </summary>
-    [Fact] public void Booking_ShouldInitializeWithPendingStatusAndNullCreationTime()
+    [Fact]
+    public void Booking_ShouldInitializeWithPendingStatusAndNullCreationTime()
     {
         // Arrange
         var eventId = Guid.NewGuid();

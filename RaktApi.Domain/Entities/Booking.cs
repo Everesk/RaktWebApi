@@ -35,12 +35,12 @@ public class Booking
     /// <summary>
     /// Текущий статус бронирования.
     /// </summary>
-    public BookingStatus Status { get; private set; } 
+    public BookingStatus Status { get; private set; }
 
     /// <summary>
     /// Дата и время создания бронирования.
     /// </summary>
-    public DateTimeOffset CreatedAt { get; private set; } 
+    public DateTimeOffset CreatedAt { get; private set; }
 
     /// <summary>
     /// Дата и время обработки бронирования.

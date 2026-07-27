@@ -4,5 +4,10 @@ namespace Rakt.BookingsService.Application;
 public static class ServiceCollectionExtensions
 {
     /// <summary>Добавляет сценарии броней в DI-контейнер.</summary>
-    public static IServiceCollection AddBookingsApplication(this IServiceCollection services) => services.AddScoped<BookingService>();
+    public static IServiceCollection AddBookingsApplication(this IServiceCollection services)
+    {
+        services.AddScoped<BookingService>();
+
+        return services;
+    }
 }

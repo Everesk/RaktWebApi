@@ -4,5 +4,12 @@ namespace Rakt.EventsService.Infrastructure;
 /// <summary>Создаёт контекст событий для инструментов EF Core.</summary>
 public sealed class EventsDbContextFactory : IDesignTimeDbContextFactory<EventsDbContext>
 {
-    public EventsDbContext CreateDbContext(string[] args) => new(new DbContextOptionsBuilder<EventsDbContext>().UseNpgsql("Host=localhost;Database=rakt_events;Username=postgres;Password=postgres").Options);
+    public EventsDbContext CreateDbContext(string[] args)
+    {
+        var options = new DbContextOptionsBuilder<EventsDbContext>()
+            .UseNpgsql("Host=localhost;Database=rakt_events;Username=postgres;Password=postgres")
+            .Options;
+
+        return new EventsDbContext(options);
+    }
 }

@@ -11,14 +11,38 @@ public sealed class Booking
     public Guid EventId { get; private set; }
     /// <summary>Статус брони.</summary>
     public BookingStatus Status { get; private set; } = BookingStatus.Pending;
-    private Booking() { }
-    private Booking(Guid userId, Guid eventId) => (UserId, EventId) = (userId, eventId);
+    private Booking()
+    {
+    }
+
+    private Booking(Guid userId, Guid eventId)
+    {
+        UserId = userId;
+        EventId = eventId;
+    }
     /// <summary>Создаёт ожидающую подтверждения бронь.</summary>
-    public static Booking Create(Guid userId, Guid eventId) => new(userId, eventId);
+    public static Booking Create(Guid userId, Guid eventId)
+    {
+        return new Booking(userId, eventId);
+    }
     /// <summary>Подтверждает бронь после ответа сервиса событий.</summary>
-    public void Confirm() => Status = BookingStatus.Confirmed;
+    public void Confirm()
+    {
+        Status = BookingStatus.Confirmed;
+    }
     /// <summary>Отклоняет бронь после отказа сервиса событий.</summary>
-    public void Reject() => Status = BookingStatus.Rejected;
+    public void Reject()
+    {
+        Status = BookingStatus.Rejected;
+    }
     /// <summary>Отменяет активную бронь.</summary>
-    public void Cancel() { if (Status == BookingStatus.Cancelled) throw new InvalidOperationException("Бронь уже отменена."); Status = BookingStatus.Cancelled; }
+    public void Cancel()
+    {
+        if (Status == BookingStatus.Cancelled)
+        {
+            throw new InvalidOperationException("Бронь уже отменена.");
+        }
+
+        Status = BookingStatus.Cancelled;
+    }
 }

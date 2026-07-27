@@ -6,5 +6,14 @@ public sealed class BookingsDbContext(DbContextOptions<BookingsDbContext> option
 {
     /// <summary>Брони сервиса.</summary>
     public DbSet<Booking> Bookings => Set<Booking>();
-    protected override void OnModelCreating(ModelBuilder builder) => builder.Entity<Booking>(e => { e.ToTable("bookings"); e.HasKey(x => x.Id); e.Property(x => x.Status).HasConversion<string>(); e.HasIndex(x => new { x.UserId, x.EventId }); });
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        builder.Entity<Booking>(entity =>
+        {
+            entity.ToTable("bookings");
+            entity.HasKey(booking => booking.Id);
+            entity.Property(booking => booking.Status).HasConversion<string>();
+            entity.HasIndex(booking => new { booking.UserId, booking.EventId });
+        });
+    }
 }

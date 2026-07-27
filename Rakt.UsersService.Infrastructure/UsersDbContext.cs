@@ -6,5 +6,16 @@ public sealed class UsersDbContext(DbContextOptions<UsersDbContext> options) : D
 {
     /// <summary>Пользователи сервиса.</summary>
     public DbSet<User> Users => Set<User>();
-    protected override void OnModelCreating(ModelBuilder builder) => builder.Entity<User>(e => { e.ToTable("users"); e.HasKey(x => x.Id); e.Property(x => x.Login).HasMaxLength(100).IsRequired(); e.Property(x => x.PasswordHash).HasMaxLength(64).IsRequired(); e.Property(x => x.Role).HasConversion<string>(); e.HasIndex(x => x.Login).IsUnique(); });
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        builder.Entity<User>(entity =>
+        {
+            entity.ToTable("users");
+            entity.HasKey(user => user.Id);
+            entity.Property(user => user.Login).HasMaxLength(100).IsRequired();
+            entity.Property(user => user.PasswordHash).HasMaxLength(64).IsRequired();
+            entity.Property(user => user.Role).HasConversion<string>();
+            entity.HasIndex(user => user.Login).IsUnique();
+        });
+    }
 }

@@ -6,5 +6,9 @@ namespace Rakt.UsersService.Infrastructure;
 public sealed class UserRepository(UsersDbContext db) : IUserRepository
 {
     public Task<User?> FindByLoginAsync(string login, CancellationToken ct = default) => db.Users.SingleOrDefaultAsync(x => x.Login == login, ct);
-    public async Task AddAsync(User user, CancellationToken ct = default) { await db.Users.AddAsync(user, ct); await db.SaveChangesAsync(ct); }
+    public async Task AddAsync(User user, CancellationToken ct = default)
+    {
+        await db.Users.AddAsync(user, ct);
+        await db.SaveChangesAsync(ct);
+    }
 }

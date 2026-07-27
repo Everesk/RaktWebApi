@@ -14,16 +14,31 @@ public sealed class Event
     /// <summary>Оставшееся число мест.</summary>
     public int AvailableSeats { get; private set; }
 
-    private Event() { Title = null!; }
+    private Event()
+    {
+        Title = null!;
+    }
     private Event(string title, DateTimeOffset startAt, int totalSeats)
     {
         if (totalSeats <= 0) throw new ArgumentOutOfRangeException(nameof(totalSeats));
-        Title = title; StartAt = startAt; TotalSeats = AvailableSeats = totalSeats;
+        Title = title;
+        StartAt = startAt;
+        TotalSeats = totalSeats;
+        AvailableSeats = totalSeats;
     }
     /// <summary>Создаёт новое событие.</summary>
     public static Event Create(string title, DateTimeOffset startAt, int totalSeats) => new(title, startAt, totalSeats);
     /// <summary>Пытается занять одно место.</summary>
-    public bool TryReserveSeat() { if (AvailableSeats == 0) return false; AvailableSeats--; return true; }
+    public bool TryReserveSeat()
+    {
+        if (AvailableSeats == 0)
+        {
+            return false;
+        }
+
+        AvailableSeats--;
+        return true;
+    }
     /// <summary>Возвращает одно место без превышения вместимости.</summary>
     public void ReleaseSeat() => AvailableSeats = Math.Min(TotalSeats, AvailableSeats + 1);
 }

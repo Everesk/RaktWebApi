@@ -4,5 +4,10 @@ namespace Rakt.EventsService.Application;
 public static class ServiceCollectionExtensions
 {
     /// <summary>Добавляет сценарии событий в DI-контейнер.</summary>
-    public static IServiceCollection AddEventsApplication(this IServiceCollection services) => services.AddScoped<EventSeatsService>();
+    public static IServiceCollection AddEventsApplication(this IServiceCollection services)
+    {
+        services.AddScoped<EventSeatsService>();
+
+        return services;
+    }
 }

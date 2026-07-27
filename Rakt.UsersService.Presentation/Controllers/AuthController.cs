@@ -19,5 +19,10 @@ public sealed class AuthController(IUserService users) : ApiControllerBase
     [AllowAnonymous]
     [HttpPost("login")]
     [ProducesResponseType(typeof(AuthenticationResult), StatusCodes.Status200OK)]
-    public async Task<ActionResult<AuthenticationResult>> Login(LoginCommand command, CancellationToken cancellationToken) => Ok(await users.LoginAsync(command, cancellationToken));
+    public async Task<ActionResult<AuthenticationResult>> Login(LoginCommand command, CancellationToken cancellationToken)
+    {
+        var result = await users.LoginAsync(command, cancellationToken);
+
+        return Ok(result);
+    }
 }

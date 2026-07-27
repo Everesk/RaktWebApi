@@ -7,8 +7,22 @@ public static class WebApplicationExtensions
     /// <summary>Применяет миграции, middleware и маршруты контроллеров.</summary>
     public static WebApplication UseStandardConfiguration(this WebApplication app)
     {
-        using var scope = app.Services.CreateScope(); scope.ServiceProvider.GetRequiredService<EventsDbContext>().Database.Migrate();
-        app.UseExceptionHandler(); if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
-        app.UseHttpsRedirection(); app.MapControllers(); return app;
+        using var scope = app.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<EventsDbContext>();
+
+        dbContext.Database.Migrate();
+
+        app.UseExceptionHandler();
+
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI();
+        }
+
+        app.UseHttpsRedirection();
+        app.MapControllers();
+
+        return app;
     }
 }

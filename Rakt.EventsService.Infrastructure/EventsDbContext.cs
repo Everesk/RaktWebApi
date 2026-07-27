@@ -6,5 +6,13 @@ public sealed class EventsDbContext(DbContextOptions<EventsDbContext> options) :
 {
     /// <summary>События сервиса.</summary>
     public DbSet<Event> Events => Set<Event>();
-    protected override void OnModelCreating(ModelBuilder builder) => builder.Entity<Event>(e => { e.ToTable("events"); e.HasKey(x => x.Id); e.Property(x => x.Title).HasMaxLength(200).IsRequired(); });
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        builder.Entity<Event>(entity =>
+        {
+            entity.ToTable("events");
+            entity.HasKey(eventEntity => eventEntity.Id);
+            entity.Property(eventEntity => eventEntity.Title).HasMaxLength(200).IsRequired();
+        });
+    }
 }

@@ -4,5 +4,10 @@ namespace Rakt.UsersService.Application;
 public static class ServiceCollectionExtensions
 {
     /// <summary>Добавляет сценарии пользователей в DI-контейнер.</summary>
-    public static IServiceCollection AddUsersApplication(this IServiceCollection services) => services.AddScoped<IUserService, UserService>();
+    public static IServiceCollection AddUsersApplication(this IServiceCollection services)
+    {
+        services.AddScoped<IUserService, UserService>();
+
+        return services;
+    }
 }

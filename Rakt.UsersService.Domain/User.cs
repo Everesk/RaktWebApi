@@ -12,9 +12,22 @@ public sealed class User
     /// <summary>Роль пользователя.</summary>
     public UserRole Role { get; private set; }
 
-    private User() { Login = null!; PasswordHash = null!; }
-    private User(string login, string passwordHash, UserRole role) => (Login, PasswordHash, Role) = (login, passwordHash, role);
+    private User()
+    {
+        Login = null!;
+        PasswordHash = null!;
+    }
+
+    private User(string login, string passwordHash, UserRole role)
+    {
+        Login = login;
+        PasswordHash = passwordHash;
+        Role = role;
+    }
 
     /// <summary>Создаёт пользователя с подготовленным хешем пароля.</summary>
-    public static User Create(string login, string passwordHash, UserRole role = UserRole.User) => new(login, passwordHash, role);
+    public static User Create(string login, string passwordHash, UserRole role = UserRole.User)
+    {
+        return new User(login, passwordHash, role);
+    }
 }

@@ -137,7 +137,7 @@ public static class WebApplicationBuilderExtensions
                 "{Message:lj}{NewLine}{Exception}"
             )
             .CreateLogger();
-        
+
         builder.Host.UseSerilog();
 
         return builder;
