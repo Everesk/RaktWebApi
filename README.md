@@ -79,7 +79,21 @@ RaktWebApi — учебное ASP.NET Core Web API приложение для �
 
 ### RaktApi.Web
 
-Точка входа ASP.NET Core и Presentation-слой.
+```text
+Клиент
+  │ POST /bookings
+  ▼
+Bookings ── booking-requested ──► Events
+  │                                │
+  │                         резервирует место
+  │                         или фиксирует отказ
+  │                                │
+  ◄── seats-reserved ──────────────┘
+  │        или
+  ◄── seats-reservation-rejected ──┘
+  ▼
+Confirmed / Rejected
+```
 
 - контроллеры и HTTP-маппинг;
 - middleware глобальной обработки исключений и `ProblemDetails`;
