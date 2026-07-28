@@ -1,590 +1,210 @@
-# RaktWebApi
+# Rakt — микросервисная система событий и бронирований
 
-Практикум, спринт 1–8
-Шундерюк Михаил
+Учебный проект, спринты 1–9. Система на .NET 9 разделена на независимые сервисы пользователей, событий и бронирований. Каждый сервис использует чистую архитектуру и собственную PostgreSQL-базу; обмен между сервисами выполняется только через Kafka.
 
-## Описание проекта
+## Возможности
 
-RaktWebApi — учебное ASP.NET Core Web API приложение для управления событиями и бронированиями.
-
-Проект демонстрирует:
-- базовую архитектуру Web API
-- разделение по слоям
-- DTO и маппинг
-- валидацию входных данных
-- Dependency Injection
-- Swagger для тестирования API
-- глобальную обработку ошибок
-- логирование через Serilog
-- фоновую обработку бронирований через `BackgroundService`
-- контроль доступных мест на событиях
-- защиту критических секций при конкурентном бронировании
-- unit- и интеграционные тесты
-
-Приложение позволяет:
-- получать список событий
-- получать событие по идентификатору
-- создавать новое событие
-- обновлять существующее событие
-- удалять событие
-- создавать бронирование для события
-- получать бронирование по идентификатору
-- автоматически переводить брони из `Pending` в `Confirmed` в фоне
-- отклонять брони, если событие удалено до фоновой обработки
-
-Приложение работает с PostgreSQL. Схема базы данных управляется миграциями EF Core.
+- регистрация пользователей, вход и выпуск JWT;
+- CRUD событий с учётом доступных мест;
+- асинхронное создание, подтверждение, отклонение и отмена броней;
+- защита от овербукинга при конкурентных запросах;
+- Swagger, централизованная обработка ошибок и Serilog во всех HTTP-сервисах;
+- unit-, integration- и E2E-тесты.
 
 ## Стек
 
-- .NET 9
-- ASP.NET Core Web API
-- Swagger / Swashbuckle
-- Serilog
-- xUnit
-- FluentAssertions
-- EF Core Migrations
-- Testcontainers PostgreSQL
+- .NET 9, ASP.NET Core Web API;
+- EF Core и PostgreSQL 16;
+- Confluent.Kafka и Apache Kafka;
+- JWT Bearer Authentication;
+- Serilog;
+- xUnit и Testcontainers.
 
-## Архитектура проекта
+## Структура решения
 
-Проект разделён на четыре сборки по принципам чистой архитектуры. Направление зависимостей контролируется `ProjectReference`:
+Каждый сервис состоит из слоёв `Domain`, `Application`, `Infrastructure`, `Presentation`.
 
-### RaktApi.Domain
+| Сервис | Назначение | HTTP-порт | База данных / порт |
+| --- | --- | ---: | --- |
+| `Rakt.UsersService.*` | пользователи, пароль, JWT | 5008 | `rakt_users` / 5434 |
+| `Rakt.EventsService.*` | события и свободные места | 5009 | `rakt_events` / 5435 |
+| `Rakt.BookingsService.*` | создание, статусы и отмена броней | 5010 | `rakt_bookings` / 5436 |
+| `Rakt.Contracts` | публичные Kafka-контракты и имена топиков | — | — |
 
-Не зависит от других проектов и внешних технологий.
+Тестовые проекты разделены по уровню проверки:
 
-- доменные сущности `Event` и `Booking`;
-- перечисление `BookingStatus`;
-- доменные исключения и бизнес-правила.
+- `Rakt.*Service.UnitTests` — изолированные unit-тесты;
+- `Rakt.*Service.IntegrationTests` — EF Core и Kafka через Testcontainers;
+- `Rakt.E2ETests` — полный цикл между тремя локально запущенными сервисами и Docker-инфраструктурой.
 
-### RaktApi.Application
+## Границы данных
 
-Зависит только от Domain.
+У сервисов нет общей схемы и нет навигационных свойств между сервисами.
 
-- use cases и их интерфейсы;
-- DTO и мапперы;
-- интерфейсы портов репозиториев;
-- use case фоновой обработки ожидающих бронирований;
-- `AddApplication()` для регистрации application-сервисов в DI.
+- Users хранит только пользователей.
+- Events хранит события и состояние обработки резервирований мест.
+- Bookings хранит только брони, `UserId` и `EventId` как обычные идентификаторы.
 
-### RaktApi.Infrastructure
+Бронирования не обращаются к БД Events или Users напрямую.
 
-Зависит от Application и Domain и содержит интеграции с внешними технологиями.
+## Взаимодействие микросервисов
 
-- EF Core `AppDbContext`, конфигурации сущностей и миграции;
-- реализации портов репозиториев для PostgreSQL;
-- EF Core-интерсепторы;
-- hosted service и настройки фонового запуска обработки бронирований;
-- `AddInfrastructure()` для регистрации инфраструктурных зависимостей и `ApplyInfrastructureMigrations()` для применения миграций.
+Users выдаёт JWT. Events и Bookings проверяют этот токен по общим значениям `Jwt:Secret`, `Jwt:Issuer` и `Jwt:Audience` в своих конфигурациях.
 
-### RaktApi.Web
+Обмен между Events и Bookings построен на Kafka. При создании брони Bookings сохраняет её в статусе `Pending` и публикует `BookingRequested` в топик `booking-requested`. Events получает запрос, резервирует место либо фиксирует отказ, после чего публикует `SeatsReserved` или `SeatsReservationRejected`. Bookings получает ответ и переводит бронь в итоговый статус `Confirmed` или `Rejected`.
 
-```text
-Клиент
-  │ POST /bookings
-  ▼
-Bookings ── booking-requested ──► Events
-  │                                │
-  │                         резервирует место
-  │                         или фиксирует отказ
-  │                                │
-  ◄── seats-reserved ──────────────┘
-  │        или
-  ◄── seats-reservation-rejected ──┘
-  ▼
-Confirmed / Rejected
-```
+При отмене Bookings публикует `BookingCancelled` в топик `booking-cancelled`. Events получает сообщение и возвращает место, только если оно было ранее занято для этой брони.
 
-- контроллеры и HTTP-маппинг;
-- middleware глобальной обработки исключений и `ProblemDetails`;
-- конфигурация HTTP-pipeline, Swagger и Serilog;
-- composition root в `Program.cs`, вызывающий `AddApplication()` и `AddInfrastructure()`.
+### Kafka-топики и контракты
 
-### Тестовый проект Rakt.UnitTests
+| Топик | Сообщение | Издатель | Подписчик |
+| --- | --- | --- | --- |
+| `booking-requested` | `BookingRequested` | Bookings | Events |
+| `seats-reserved` | `SeatsReserved` | Events | Bookings |
+| `seats-reservation-rejected` | `SeatsReservationRejected` | Events | Bookings |
+| `booking-cancelled` | `BookingCancelled` | Bookings | Events |
 
-- Unit-тесты сервисов, маппинга и фоновой обработки
-- Используется FluentAssertions
+Ключ каждого Kafka-сообщения — `EventId`. Поэтому команды одного события попадают в один partition и обрабатываются в порядке этого ключа.
 
-### Тестовый проект Rakt.IntegrationTests
+### Идемпотентность и отмена
 
-- Интеграционные тесты репозиториев на реальном PostgreSQL
-- Используется Testcontainers: один временный контейнер PostgreSQL и чистая база перед каждым тестом
+Events сохраняет состояние обработки по `BookingId` в таблице `booking_seat_reservations`.
 
-## Требования
+- повторный `booking-requested` не списывает место второй раз;
+- повторный `booking-cancelled` не возвращает место второй раз;
+- если отмена пришла раньше запроса на резервирование, сохраняется маркер отмены и поздний запрос не занимает место;
+- если обработчик завершился после сохранения БД, но до Kafka commit, сообщение будет прочитано повторно безопасно.
 
-- .NET SDK 9.0
-- PostgreSQL 14+ или совместимая версия
+Это также исключает овербукинг: при ограниченном количестве мест часть броней получает `Confirmed`, остальные — `Rejected`.
 
-## Запуск проекта
+## Локальный запуск
 
-Клонировать репозиторий:
-```
-git clone <ссылка-на-репозиторий>
-```
+### 1. Поднять инфраструктуру
 
-Настроить строку подключения в `RaktApi.Web/appsettings.json`:
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5433;Database=eventapi;Username=postgres;Password=postgres"
-  }
-}
-```
-
-Если вы запускаете PostgreSQL локально, проверьте, что порт совпадает со строкой подключения. В этом проекте по умолчанию используется `5433`, чтобы не конфликтовать с возможной локальной установкой PostgreSQL на `5432`.
-
-### JWT-конфигурация
-
-Параметры выпуска и проверки JWT находятся в секции `Jwt` файла `RaktApi.Web/appsettings.json`:
-
-```json
-{
-  "Jwt": {
-    "Secret": "локальный-секрет-не-короче-32-символов",
-    "Issuer": "RaktApi",
-    "Audience": "RaktApiClients",
-    "LifetimeMinutes": 60
-  }
-}
-```
-
-- `Secret` — ключ подписи токенов; он должен содержать минимум 32 символа;
-- `Issuer` — издатель токена;
-- `Audience` — получатель токена;
-- `LifetimeMinutes` — время жизни токена в минутах.
-
-Значение `Secret` из репозитория предназначено только для локальной разработки. В production используйте уникальный криптографически стойкий секрет, передавайте его через переменную окружения или защищённое хранилище секретов и не сохраняйте в `appsettings.json`.
-
-### PostgreSQL через Docker Compose
-
-Для быстрого запуска PostgreSQL можно использовать `docker-compose.yml` из корня репозитория:
+Docker Compose запускает только Kafka, ZooKeeper и три PostgreSQL-базы; сами сервисы запускаются через `dotnet run`.
 
 ```bash
 docker compose up -d
 ```
 
-Контейнер поднимается с пробросом `5433:5432`, поэтому приложение подключается к `localhost:5433`.
+Проверить контейнеры:
 
-Остановка контейнера:
+```bash
+docker compose ps
+```
+
+Остановить инфраструктуру:
 
 ```bash
 docker compose down
 ```
 
-Данные PostgreSQL сохраняются в именованном томе `eventapi_pgdata`.
-
-### Миграции EF Core
-
-Схема базы данных создаётся и обновляется миграциями EF Core. При запуске приложение применяет все неприменённые миграции через `Database.Migrate()`.
-
-Создать миграцию из корня репозитория. Миграции и `DbContext` находятся в Infrastructure, а startup-проектом остаётся Web:
+Для удаления данных томов:
 
 ```bash
-dotnet ef migrations add <MigrationName> --project RaktApi.Infrastructure/RaktApi.Infrastructure.csproj --startup-project RaktApi.Web/RaktApi.Web.csproj --context AppDbContext --output-dir Migrations
+docker compose down -v
 ```
 
-Применить миграции вручную:
+### 2. Запустить сервисы
+
+В отдельных терминалах из корня решения:
 
 ```bash
-dotnet ef database update --project RaktApi.Infrastructure/RaktApi.Infrastructure.csproj --startup-project RaktApi.Web/RaktApi.Web.csproj --context AppDbContext
+dotnet run --project Rakt.UsersService.Presentation/Rakt.UsersService.Presentation.csproj --launch-profile http
+dotnet run --project Rakt.EventsService.Presentation/Rakt.EventsService.Presentation.csproj --launch-profile http
+dotnet run --project Rakt.BookingsService.Presentation/Rakt.BookingsService.Presentation.csproj --launch-profile http
 ```
 
-Перейти в папку проекта:
-```
-cd RaktApi.Web
-```
-Запустить приложение:
- - Только HTTP:
-```
-dotnet run
-```
- - HTTP и HTTPS:
-```
-dotnet run --launch-profile https
-```
-После запуска приложение будет доступно по адресам:
+При старте каждый сервис применяет свои EF Core-миграции. Events также создаёт необходимые Kafka-топики до запуска consumers.
 
-- http://localhost:5007
-- https://localhost:7130
+Swagger доступен в Development-режиме:
 
-При запуске приложение автоматически применяет все неприменённые миграции EF Core.
+- `http://localhost:5008/swagger` — Users;
+- `http://localhost:5009/swagger` — Events;
+- `http://localhost:5010/swagger` — Bookings.
 
-## Swagger
+Health endpoints: `/health` на каждом сервисе.
 
-Swagger доступен только в режиме разработки по адресу:
+## JWT и роли
 
-/swagger
+JWT выдаёт только Users. Общие JWT-настройки должны совпадать в трёх `appsettings.json`.
 
-Через Swagger можно просматривать и тестировать все доступные эндпоинты API.
+| Роль | Доступ |
+| --- | --- |
+| `User` | вход, создание и отмена собственной брони |
+| `Admin` | права User и создание, обновление, удаление событий; отмена любой брони |
 
-### Получение JWT через Swagger
-
-1. Откройте `/swagger` в режиме разработки.
-2. Вызовите `POST /auth/register`, передав логин, пароль и при необходимости роль. Если поле `role` не указано, создается пользователь с ролью `User`; для тестирования допускается строковое значение `"Admin"`.
-3. Вызовите `POST /auth/login` с теми же логином и паролем.
-4. Скопируйте значение `token` из ответа, нажмите кнопку `Authorize` в верхней части Swagger и вставьте токен без префикса `Bearer`. Swagger будет автоматически передавать его в защищённых запросах.
-
-В других HTTP-клиентах JWT передается в заголовке:
+Передавайте токен в заголовке:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-## Роли и разграничение прав
+## HTTP API
 
-В системе предусмотрены две роли:
+### Users — `http://localhost:5008`
 
-| Роль | Права |
-| --- | --- |
-| `User` | Регистрация, вход, создание брони, просмотр брони по идентификатору и отмена только собственной брони. |
-| `Admin` | Все права `User`, отмена любой брони, создание, изменение и удаление событий. |
+- `POST /auth/register` — регистрация, `204 No Content`;
+- `POST /auth/login` — вход и получение JWT.
 
-Без JWT доступны только `POST /auth/register` и `POST /auth/login`.
+### Events — `http://localhost:5009`
 
-JWT требуется для `POST /events/{id}/book`, `GET /bookings/{id}` и `DELETE /bookings/{id}`. Операции `POST /events`, `PUT /events/{id}` и `DELETE /events/{id}` доступны только роли `Admin`.
+- `GET /events` — список с фильтрацией и пагинацией;
+- `GET /events/{id}` — одно событие;
+- `POST /events` — создать событие, только `Admin`;
+- `PUT /events/{id}` — изменить событие, только `Admin`;
+- `DELETE /events/{id}` — удалить событие, только `Admin`.
 
-## API
+### Bookings — `http://localhost:5010`
 
-### Authentication
+Все endpoints требуют JWT.
 
-Эндпоинты `AuthController` доступны без JWT и предназначены для регистрации и входа.
-
-### POST /auth/register
-
-Регистрирует пользователя. Поле `role` необязательно: по умолчанию используется `User`; для тестирования можно передать `Admin`.
-
-Пример тела запроса:
+- `POST /bookings` — создать Pending-бронь:
 
 ```json
 {
-  "login": "admin",
-  "password": "strong-password",
-  "role": "Admin"
+  "eventId": "00000000-0000-0000-0000-000000000000"
 }
 ```
 
-Ответы:
+- `GET /bookings/{id}` — получить текущий статус;
+- `GET /bookings/by-event/{eventId}` — список броней события;
+- `DELETE /bookings/{id}` — отменить бронь.
 
-- 204 No Content — пользователь зарегистрирован;
-- 409 Conflict — логин уже занят.
+`POST /bookings` возвращает `202 Accepted`. Итоговый статус появляется асинхронно после ответа Events: `Confirmed`, `Rejected` либо `Cancelled`.
 
-### POST /auth/login
+## Миграции EF Core
 
-Проверяет логин и пароль, затем возвращает JWT-токен.
+Миграции применяются автоматически при старте Presentation-проектов. Для создания новой миграции используйте Infrastructure-проект соответствующего сервиса:
 
-Пример тела запроса:
-
-```json
-{
-  "login": "admin",
-  "password": "strong-password"
-}
+```bash
+dotnet ef migrations add <MigrationName> \
+  --project Rakt.EventsService.Infrastructure/Rakt.EventsService.Infrastructure.csproj \
+  --startup-project Rakt.EventsService.Presentation/Rakt.EventsService.Presentation.csproj \
+  --context EventsDbContext \
+  --output-dir Migrations
 ```
 
-Пример ответа:
-
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIs..."
-}
-```
-
-Ответы:
-
-- 200 OK — токен сформирован;
-- 404 Not Found — неверный логин или пароль.
-
-### Events
-
-### Модель события
-
-Событие содержит:
-- `id` - идентификатор события
-- `title` - заголовок
-- `description` - описание
-- `startAt` - дата и время начала
-- `endAt` - дата и время окончания
-- `totalSeats` - общее количество мест на событии
-- `availableSeats` - текущее количество свободных мест
-- `isFull` - признак, что свободных мест больше нет
-
-При создании события `availableSeats` устанавливается равным `totalSeats`.
-`totalSeats` обязателен и должен быть больше нуля.
-
-### GET /events
-
-Получить список событий с фильтрацией и пагинацией.
-
-Query параметры (все опциональные):
-- title - фильтр по заголовку (частичное совпадение, без учета регистра)
-- from - дата начала (события не раньше указанной даты)
-- to - дата окончания (события не позже указанной даты)
-- page - номер страницы (>= 1)
-- pageSize - размер страницы (1–100)
-
-Пример запроса:
-
-```http
-GET /events?title=встреча&from=2026-03-01T00:00:00&page=1&pageSize=2
-```
-
-Ответ:
-- 200 OK
-
-Пример ответа:
-```json
-{
-  "totalCount": 5,
-  "items": [
-    {
-      "id": "1",
-      "title": "Встреча команды",
-      "description": "Обсуждение задач",
-      "startAt": "2026-03-25T10:00:00",
-      "endAt": "2026-03-25T11:00:00",
-      "totalSeats": 10,
-      "availableSeats": 10,
-      "isFull": false
-    },
-    {
-      "id": "2",
-      "title": "Встреча с заказчиком",
-      "description": "Обсуждение требований",
-      "startAt": "2026-03-26T12:00:00",
-      "endAt": "2026-03-26T13:00:00",
-      "totalSeats": 5,
-      "availableSeats": 3,
-      "isFull": false
-    }
-  ],
-  "page": 1,
-  "pageSize": 2,
-  "currentCount": 2
-}
-```
-### POST /events
-
-Создать новое событие.
-
-Content-Type:
-application/json
-
-Пример тела запроса:
-```json
-{
-  "title": "Встреча команды",
-  "description": "Обсуждение задач",
-  "startAt": "2026-03-25T10:00:00",
-  "endAt": "2026-03-25T11:00:00",
-  "totalSeats": 10
-}
-```
-Ответ:
-- 201 Created
-
-### PUT /events/{id}
-
-Обновить существующее событие.
-
-Пример тела запроса:
-```json
-{
-  "title": "Обновленная встреча",
-  "description": "Новая повестка",
-  "startAt": "2026-03-25T12:00:00",
-  "endAt": "2026-03-25T13:00:00"
-}
-```
-Ответы:
-- 204 No Content - успешно обновлено
-- 404 Not Found - если событие не найдено
-
-### DELETE /events/{id}
-
-Удалить событие.
-
-Ответы:
-- 204 No Content - успешно удалено
-- 404 Not Found - если событие не найдено
-
-### Bookings
-
-### POST /events/{id}/book
-
-Создать бронь для события.
-
-Параметры пути:
-- id - идентификатор существующего события
-
-Ответы:
-- 202 Accepted - бронь создана и возвращена в теле ответа
-- 404 Not Found - если событие не найдено
-- 409 Conflict - если на событии больше нет свободных мест
-
-Пример ответа:
-```json
-{
-  "id": "d6d6f4a1-4d22-4e36-9f5c-5ed49de2d6e1",
-  "eventId": "8a0d36af-9ad9-4c7f-8a5b-2cb7ac4b1111",
-  "status": "Pending",
-  "createdAt": "2026-04-29T10:00:00+00:00",
-  "processedAt": null
-}
-```
-
-### GET /events/{id}/bookings
-
-Получить все бронирования для выбранного события.
-
-Параметры пути:
-- id - идентификатор существующего события
-
-Ответы:
-- 200 OK - список броней события
-- 404 Not Found - если событие не найдено
-
-Пример ответа:
-```json
-[
-  {
-    "id": "d6d6f4a1-4d22-4e36-9f5c-5ed49de2d6e1",
-    "eventId": "8a0d36af-9ad9-4c7f-8a5b-2cb7ac4b1111",
-    "status": "Pending",
-    "createdAt": "2026-04-29T10:00:00+00:00",
-    "processedAt": null
-  }
-]
-```
-
-### GET /bookings/{id}
-
-Получить текущее состояние брони по идентификатору.
-
-Ответы:
-- 200 OK
-- 404 Not Found - если бронь не найдена
-
-### Фоновая обработка бронирований
-
-В приложении реализован `BackgroundService`, который:
-- периодически опрашивает брони в статусе `Pending`
-- запускает обработку найденных броней параллельно через `Task.WhenAll`
-- имитирует обращение к внешней системе через задержку
-- переводит бронь в `Confirmed`, если событие существует
-- переводит бронь в `Rejected`, если событие было удалено к моменту обработки
-- заполняет `ProcessedAt`
-- сохраняет обновлённую бронь в хранилище
-
-Это означает, что после `POST /events/{id}/book` статус брони может измениться спустя несколько секунд, и `GET /bookings/{id}` покажет уже обновлённое состояние.
-
-## Синхронизация и конкурентность
-
-В приложении есть две критические зоны.
-
-`BookingService.CreateBookingAsync` защищает создание брони через `lock`:
-- чтение события из хранилища
-- проверку и уменьшение `AvailableSeats` через `TryReserveSeats()`
-- сохранение обновлённого события
-- создание и сохранение брони
-
-Это нужно, чтобы два параллельных запроса не смогли одновременно увидеть одно и то же свободное место и создать больше броней, чем разрешает `totalSeats`.
-
-`BookingProcessor` использует `SemaphoreSlim`:
-- задержка, имитирующая внешний вызов, выполняется до захвата семафора и поэтому идет параллельно
-- запись статуса брони и обновление хранилища выполняются после `WaitAsync`
-- `SemaphoreSlim` выбран вместо `lock`, потому что внутри обработки есть `await`
-
-При отклонении брони место возвращается в пул через `ReleaseSeats()`.
-
-Пример сценария с защитой от овербукинга:
-1. Создано событие с `totalSeats = 5`.
-2. Одновременно приходят 20 запросов `POST /events/{id}/book`.
-3. Только 5 запросов успешно создают брони и уменьшают `availableSeats`.
-4. Остальные 15 запросов получают `409 Conflict` с сообщением `No available seats for this event`.
-5. Итоговое состояние события: `availableSeats = 0`, `isFull = true`.
-
-## Валидация
-
-Реализованы следующие проверки:
-
-- Title обязателен
-- StartAt обязателен
-- EndAt обязателен
-- EndAt должен быть позже StartAt
-- TotalSeats обязателен при создании события
-- TotalSeats должен быть больше нуля
-
-При ошибках валидации возвращается:
-
-- 400 Bad Request
-
-## Глобальная обработка ошибок
-В приложении реализована централизованная обработка исключений через middleware.
-
-Все необработанные исключения:
-- перехватываются на уровне pipeline
-- логируются
-- возвращаются клиенту в формате ProblemDetails
-
-Поддерживаются сценарии:
-- ValidationException - 400 Bad Request
-- PastEventBookingException - 400 Bad Request
-- InvalidCredentialsException - 404 Not Found
-- отсутствие или недействительность JWT-токена - 401 Unauthorized
-- OperationForbiddenException - 403 Forbidden
-- недостаточная роль для операции - 403 Forbidden
-- NotFoundException - 404 Not Found
-- NoAvailableSeatsException - 409 Conflict
-- ActiveBookingsLimitExceededException - 409 Conflict
-- UserAlreadyExistsException - 409 Conflict
-- прочие исключения - 500 Internal Server Error
-
-Пример ответа:
-```json
-{
-  "title": "Ресурс не найден",
-  "status": 404,
-  "detail": "Событие с идентификатором '...' не найдено.",
-  "instance": "/events/...",
-  "traceId": "..."
-}
-```
-## Обработка статус-кодов
-Для ситуаций без выброса исключения дополнительно используется middleware обработки статус-кодов.
-
-Покрываются:
-- 404 Not Found
-- 405 Method Not Allowed
-
-## Логирование
-В приложении используется Serilog.
-
-Логи записываются:
-- в консоль
-- в файл logs/log-*.txt
-
-Особенности:
-- ошибки 500 логируются с полным stack trace
-- ошибки 400, 404 и 409 логируются без stack trace
-- в ответах присутствует traceId, который можно сопоставить с логами
+Замените Events-пути и контекст на Users или Bookings при необходимости.
 
 ## Тестирование
-Для ручной проверки API можно использовать:
-- Swagger
-- файл RaktWebApi.http
 
-Для запуска unit-тестов:
+Unit-тесты:
 
 ```bash
-dotnet test Rakt.UnitTests/Rakt.UnitTests.csproj
+dotnet test RaktWebApi.sln --filter "Category=Unit"
 ```
 
-Unit-тесты используют `Microsoft.EntityFrameworkCore.InMemory`, поэтому PostgreSQL для них не требуется.
-
-Для запуска интеграционных тестов:
+Integration-тесты (Docker daemon должен быть запущен):
 
 ```bash
-dotnet test Rakt.IntegrationTests/Rakt.IntegrationTests.csproj
+dotnet test RaktWebApi.sln --filter "Category=Integration"
 ```
 
-Интеграционные тесты запускают временный контейнер PostgreSQL через Testcontainers. Перед запуском Docker Desktop или другой Docker daemon должен быть запущен; продакшен-база и контейнер из `docker-compose.yml` при этом не используются.
+E2E-тесты требуют поднятой `docker compose` инфраструктуры:
+
+```bash
+dotnet test Rakt.E2ETests/Rakt.E2ETests.csproj --filter "Category=E2E"
+```
+
+E2E-набор проверяет обычный цикл брони, конкурентные запросы с ограниченным числом мест и немедленную отмену.
