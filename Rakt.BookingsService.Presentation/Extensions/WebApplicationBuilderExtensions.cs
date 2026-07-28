@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using Serilog;
 using Serilog.Events;
 namespace Rakt.BookingsService.Presentation.Extensions;
@@ -48,8 +49,36 @@ public static class WebApplicationBuilderExtensions
         builder.Services.AddControllers();
         builder.Services.AddProblemDetails();
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen(options => options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, $"{Assembly.GetExecutingAssembly().GetName().Name}.xml")));
+        builder.Services.AddSwaggerGen(options =>
+        {
+            options.IncludeXmlComments(
+                Path.Combine(AppContext.BaseDirectory, $"{Assembly.GetExecutingAssembly().GetName().Name}.xml"));
+            ConfigureBearerAuthentication(options);
+        });
         return builder;
+    }
+
+    /// <summary>
+    /// Добавляет в Swagger схему Bearer JWT и глобальное требование авторизации.
+    /// </summary>
+    private static void ConfigureBearerAuthentication(Swashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions options)
+    {
+        options.AddSecurityDefinition(
+            JwtBearerDefaults.AuthenticationScheme,
+            new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = JwtBearerDefaults.AuthenticationScheme,
+                BearerFormat = "JWT",
+                Description = "Введите JWT-токен без префикса Bearer."
+            });
+        options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference(
+                JwtBearerDefaults.AuthenticationScheme,
+                document,
+                null)] = []
+        });
     }
 
     /// <summary>Настраивает Serilog для консоли и ежедневных файлов журналов.</summary>
