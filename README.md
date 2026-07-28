@@ -24,11 +24,11 @@
 
 Каждый сервис состоит из слоёв `Domain`, `Application`, `Infrastructure`, `Presentation`.
 
-| Сервис | Назначение | HTTP-порт | База данных / порт |
+| Сервис | Назначение | HTTPS-порт | База данных / порт |
 | --- | --- | ---: | --- |
-| `Rakt.UsersService.*` | пользователи, пароль, JWT | 5008 | `rakt_users` / 5434 |
-| `Rakt.EventsService.*` | события и свободные места | 5009 | `rakt_events` / 5435 |
-| `Rakt.BookingsService.*` | создание, статусы и отмена броней | 5010 | `rakt_bookings` / 5436 |
+| `Rakt.UsersService.*` | пользователи, пароль, JWT | 7131 | `rakt_users` / 5434 |
+| `Rakt.EventsService.*` | события и свободные места | 7132 | `rakt_events` / 5435 |
+| `Rakt.BookingsService.*` | создание, статусы и отмена броней | 7133 | `rakt_bookings` / 5436 |
 | `Rakt.Contracts` | публичные Kafka-контракты и имена топиков | — | — |
 
 Тестовые проекты разделены по уровню проверки:
@@ -110,18 +110,18 @@ docker compose down -v
 В отдельных терминалах из корня решения:
 
 ```bash
-dotnet run --project Rakt.UsersService.Presentation/Rakt.UsersService.Presentation.csproj --launch-profile http
-dotnet run --project Rakt.EventsService.Presentation/Rakt.EventsService.Presentation.csproj --launch-profile http
-dotnet run --project Rakt.BookingsService.Presentation/Rakt.BookingsService.Presentation.csproj --launch-profile http
+dotnet run --project Rakt.UsersService.Presentation/Rakt.UsersService.Presentation.csproj --launch-profile https
+dotnet run --project Rakt.EventsService.Presentation/Rakt.EventsService.Presentation.csproj --launch-profile https
+dotnet run --project Rakt.BookingsService.Presentation/Rakt.BookingsService.Presentation.csproj --launch-profile https
 ```
 
 При старте каждый сервис применяет свои EF Core-миграции. Events также создаёт необходимые Kafka-топики до запуска consumers.
 
 Swagger доступен в Development-режиме:
 
-- `http://localhost:5008/swagger` — Users;
-- `http://localhost:5009/swagger` — Events;
-- `http://localhost:5010/swagger` — Bookings.
+- `https://localhost:7131/swagger` — Users;
+- `https://localhost:7132/swagger` — Events;
+- `https://localhost:7133/swagger` — Bookings.
 
 Health endpoints: `/health` на каждом сервисе.
 
@@ -142,12 +142,12 @@ Authorization: Bearer <token>
 
 ## HTTP API
 
-### Users — `http://localhost:5008`
+### Users — `https://localhost:7131`
 
 - `POST /auth/register` — регистрация, `204 No Content`;
 - `POST /auth/login` — вход и получение JWT.
 
-### Events — `http://localhost:5009`
+### Events — `https://localhost:7132`
 
 - `GET /events` — список с фильтрацией и пагинацией;
 - `GET /events/{id}` — одно событие;
@@ -155,7 +155,7 @@ Authorization: Bearer <token>
 - `PUT /events/{id}` — изменить событие, только `Admin`;
 - `DELETE /events/{id}` — удалить событие, только `Admin`.
 
-### Bookings — `http://localhost:5010`
+### Bookings — `https://localhost:7133`
 
 Все endpoints требуют JWT.
 
