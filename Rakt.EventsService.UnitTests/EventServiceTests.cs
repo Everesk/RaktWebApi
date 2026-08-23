@@ -21,7 +21,7 @@ public sealed class EventServiceTests
     public async Task CreateAsync_SavesEvent()
     {
         await using var context = CreateContext();
-        var service = new EventService(new EventRepository(context), new TestCache());
+        var service = new EventService(new EventRepository(context), new TestCache(), new CacheOptions());
 
         var result = await service.CreateAsync(CreateCommand("Концерт", totalSeats: 3));
 
@@ -37,7 +37,7 @@ public sealed class EventServiceTests
     public async Task GetAllAsync_AppliesTitleFilterAndPagination()
     {
         await using var context = CreateContext();
-        var service = new EventService(new EventRepository(context), new TestCache());
+        var service = new EventService(new EventRepository(context), new TestCache(), new CacheOptions());
         await service.CreateAsync(CreateCommand("Встреча 1"));
         await service.CreateAsync(CreateCommand("Встреча 2"));
         await service.CreateAsync(CreateCommand("Другое"));
@@ -61,7 +61,7 @@ public sealed class EventServiceTests
     public async Task UpdateAsync_UpdatesExistingEvent()
     {
         await using var context = CreateContext();
-        var service = new EventService(new EventRepository(context), new TestCache());
+        var service = new EventService(new EventRepository(context), new TestCache(), new CacheOptions());
         var created = await service.CreateAsync(CreateCommand("Старое"));
 
         await service.UpdateAsync(
@@ -86,7 +86,7 @@ public sealed class EventServiceTests
     public async Task GetByIdAsync_ThrowsWhenEventDoesNotExist()
     {
         await using var context = CreateContext();
-        var service = new EventService(new EventRepository(context), new TestCache());
+        var service = new EventService(new EventRepository(context), new TestCache(), new CacheOptions());
 
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetByIdAsync(Guid.NewGuid()));
     }
@@ -109,7 +109,7 @@ public sealed class EventServiceTests
         };
         var cache = new TestCache();
         cache.Seed($"event:{cachedEvent.Id}", JsonSerializer.Serialize(cachedEvent));
-        var service = new EventService(new EventRepository(context), cache);
+        var service = new EventService(new EventRepository(context), cache, new CacheOptions());
 
         var result = await service.GetByIdAsync(cachedEvent.Id);
 
@@ -131,7 +131,7 @@ public sealed class EventServiceTests
         context.Events.AddRange(mostPopular, lessPopular);
         await context.SaveChangesAsync();
         var cache = new TestCache();
-        var service = new EventService(new EventRepository(context), cache);
+        var service = new EventService(new EventRepository(context), cache, new CacheOptions());
 
         var result = await service.GetTopAsync();
 

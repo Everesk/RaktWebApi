@@ -20,6 +20,12 @@ public static class ServiceCollectionExtensions
             return ConnectionMultiplexer.Connect(options);
         });
         services.AddSingleton<ICache, RedisCache>();
+        services.AddOptions<CacheOptions>()
+            .Bind(configuration.GetSection(CacheOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddSingleton(serviceProvider =>
+            serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<CacheOptions>>().Value);
         services.AddOptions<KafkaOptions>()
             .Bind(configuration.GetSection(KafkaOptions.SectionName))
             .ValidateDataAnnotations()

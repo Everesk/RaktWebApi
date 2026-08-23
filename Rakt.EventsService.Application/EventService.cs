@@ -3,10 +3,8 @@ using Rakt.EventsService.Domain.Exceptions;
 using System.Text.Json;
 namespace Rakt.EventsService.Application;
 /// <summary>Реализует CRUD-сценарии сервиса событий.</summary>
-public sealed class EventService(IEventRepository events, ICache cache) : IEventService
+public sealed class EventService(IEventRepository events, ICache cache, CacheOptions cacheOptions) : IEventService
 {
-    private static readonly TimeSpan CacheTimeToLive = TimeSpan.FromMinutes(5);
-
     /// <inheritdoc />
     public async Task<PaginatedResult<EventInfoDto>> GetAllAsync(EventQueryDto query, CancellationToken ct = default)
     {
@@ -27,7 +25,7 @@ public sealed class EventService(IEventRepository events, ICache cache) : IEvent
 
         var entity = await events.GetAsync(id, ct) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
         var result = ToDto(entity);
-        await cache.SetAsync(cacheKey, JsonSerializer.Serialize(result), CacheTimeToLive);
+        await cache.SetAsync(cacheKey, JsonSerializer.Serialize(result), GetCacheTimeToLive());
 
         return result;
     }
@@ -44,7 +42,7 @@ public sealed class EventService(IEventRepository events, ICache cache) : IEvent
         }
 
         var result = (await events.GetTopAsync(ct)).Select(ToDto).ToList();
-        await cache.SetAsync(cacheKey, JsonSerializer.Serialize(result), CacheTimeToLive);
+        await cache.SetAsync(cacheKey, JsonSerializer.Serialize(result), GetCacheTimeToLive());
 
         return result;
     }
@@ -95,6 +93,11 @@ public sealed class EventService(IEventRepository events, ICache cache) : IEvent
             return default;
         }
     }
+
+    /// <summary>
+    /// Возвращает настроенное время жизни записи в кеше.
+    /// </summary>
+    private TimeSpan GetCacheTimeToLive() => TimeSpan.FromMinutes(cacheOptions.TimeToLiveMinutes);
 
     private static EventInfoDto ToDto(Event entity) => new() { Id = entity.Id, Title = entity.Title, Description = entity.Description, StartAt = entity.StartAt, EndAt = entity.EndAt, TotalSeats = entity.TotalSeats, AvailableSeats = entity.AvailableSeats, IsFull = entity.IsFull };
 }
