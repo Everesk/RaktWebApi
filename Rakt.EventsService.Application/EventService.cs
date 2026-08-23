@@ -42,7 +42,10 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
         }
 
         var result = (await events.GetTopAsync(ct)).Select(EventInfoDto.FromEntity).ToList();
-        await cache.SetAsync(cacheKey, JsonSerializer.Serialize(result), GetCacheTimeToLive());
+        await cache.SetAsync(
+            cacheKey,
+            JsonSerializer.Serialize(result),
+            GetCacheTimeToLive(cacheOptions.TopEventsTimeToLiveMinutes));
 
         return result;
     }
@@ -102,11 +105,14 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
     /// <summary>
     /// Возвращает настроенное время жизни записи в кеше.
     /// </summary>
-    private TimeSpan GetCacheTimeToLive() => TimeSpan.FromMinutes(cacheOptions.TimeToLiveMinutes);
+    private static TimeSpan GetCacheTimeToLive(int timeToLiveMinutes) => TimeSpan.FromMinutes(timeToLiveMinutes);
 
     /// <summary>
     /// Обновляет кеш актуальными данными события после сохранения в базе данных.
     /// </summary>
     private Task UpdateEventCacheAsync(EventInfoDto eventInfo) =>
-        cache.SetAsync($"event:{eventInfo.Id}", JsonSerializer.Serialize(eventInfo), GetCacheTimeToLive());
+        cache.SetAsync(
+            $"event:{eventInfo.Id}",
+            JsonSerializer.Serialize(eventInfo),
+            GetCacheTimeToLive(cacheOptions.EventTimeToLiveMinutes));
 }

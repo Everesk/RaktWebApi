@@ -14,7 +14,9 @@ public static class ServiceCollectionExtensions
             options.UseNpgsql(configuration.GetConnectionString("EventsDatabase")));
         services.AddSingleton<IConnectionMultiplexer>(_ =>
         {
-            var options = ConfigurationOptions.Parse(configuration.GetConnectionString("Redis")!);
+            var connectionString = configuration["Redis:ConnectionString"]
+                ?? throw new InvalidOperationException("Не задана строка подключения Redis:ConnectionString.");
+            var options = ConfigurationOptions.Parse(connectionString);
             options.AbortOnConnectFail = false;
 
             return ConnectionMultiplexer.Connect(options);

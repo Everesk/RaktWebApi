@@ -163,5 +163,5 @@ public sealed class BookingRequestedConsumer(
         cache.SetAsync(
             $"event:{eventEntity.Id}",
             JsonSerializer.Serialize(EventInfoDto.FromEntity(eventEntity)),
-            TimeSpan.FromMinutes(cacheOptions.TimeToLiveMinutes));
+            TimeSpan.FromMinutes(cacheOptions.EventTimeToLiveMinutes));
 }
