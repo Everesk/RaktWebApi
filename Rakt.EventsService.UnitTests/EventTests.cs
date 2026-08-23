@@ -247,7 +247,7 @@ public sealed class EventTests
         return new EventsDbContext(options);
     }
 
-    private static IEventService CreateService(EventsDbContext context) => new EventService(new EventRepository(context));
+    private static IEventService CreateService(EventsDbContext context) => new EventService(new EventRepository(context), new TestCache());
 
     private static CreateEventDto CreateEventDto(string title, int seats, DateTimeOffset? startAt = null) => new() { Title = title, TotalSeats = seats, StartAt = startAt ?? Utc(1), EndAt = (startAt ?? Utc(1)).AddHours(1) };
 

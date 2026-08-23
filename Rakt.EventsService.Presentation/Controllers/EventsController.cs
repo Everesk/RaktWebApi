@@ -27,6 +27,19 @@ public sealed class EventsController(IEventService events) : ApiControllerBase
     }
 
     /// <summary>
+    /// Возвращает десять событий с наибольшей долей проданных мест.
+    /// </summary>
+    /// <param name="cancellationToken">Токен отмены HTTP-запроса.</param>
+    [HttpGet("top")]
+    [ProducesResponseType(typeof(IReadOnlyList<EventInfoDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<EventInfoDto>>> GetTop(CancellationToken cancellationToken)
+    {
+        var result = await events.GetTopAsync(cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Возвращает событие по идентификатору.
     /// </summary>
     /// <param name="id">Идентификатор события.</param>

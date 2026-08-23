@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Rakt.EventsService.Application;
+using Rakt.EventsService.Domain;
 using Rakt.EventsService.Domain.Exceptions;
 using Rakt.EventsService.Infrastructure;
+using System.Text.Json;
 using Xunit;
 
 namespace Rakt.EventsService.UnitTests;
@@ -19,7 +21,7 @@ public sealed class EventServiceTests
     public async Task CreateAsync_SavesEvent()
     {
         await using var context = CreateContext();
-        var service = new EventService(new EventRepository(context));
+        var service = new EventService(new EventRepository(context), new TestCache());
 
         var result = await service.CreateAsync(CreateCommand("Концерт", totalSeats: 3));
 
@@ -35,7 +37,7 @@ public sealed class EventServiceTests
     public async Task GetAllAsync_AppliesTitleFilterAndPagination()
     {
         await using var context = CreateContext();
-        var service = new EventService(new EventRepository(context));
+        var service = new EventService(new EventRepository(context), new TestCache());
         await service.CreateAsync(CreateCommand("Встреча 1"));
         await service.CreateAsync(CreateCommand("Встреча 2"));
         await service.CreateAsync(CreateCommand("Другое"));
@@ -59,7 +61,7 @@ public sealed class EventServiceTests
     public async Task UpdateAsync_UpdatesExistingEvent()
     {
         await using var context = CreateContext();
-        var service = new EventService(new EventRepository(context));
+        var service = new EventService(new EventRepository(context), new TestCache());
         var created = await service.CreateAsync(CreateCommand("Старое"));
 
         await service.UpdateAsync(
@@ -84,9 +86,57 @@ public sealed class EventServiceTests
     public async Task GetByIdAsync_ThrowsWhenEventDoesNotExist()
     {
         await using var context = CreateContext();
-        var service = new EventService(new EventRepository(context));
+        var service = new EventService(new EventRepository(context), new TestCache());
 
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetByIdAsync(Guid.NewGuid()));
+    }
+
+    /// <summary>
+    /// Получение события возвращает значение из кеша без обращения к хранилищу.
+    /// </summary>
+    [Fact]
+    public async Task GetByIdAsync_ReturnsCachedEvent_WhenCacheContainsValue()
+    {
+        await using var context = CreateContext();
+        var cachedEvent = new EventInfoDto
+        {
+            Id = Guid.NewGuid(),
+            Title = "Из кеша",
+            StartAt = DateTimeOffset.UtcNow.AddDays(1),
+            EndAt = DateTimeOffset.UtcNow.AddDays(1).AddHours(1),
+            TotalSeats = 10,
+            AvailableSeats = 5
+        };
+        var cache = new TestCache();
+        cache.Seed($"event:{cachedEvent.Id}", JsonSerializer.Serialize(cachedEvent));
+        var service = new EventService(new EventRepository(context), cache);
+
+        var result = await service.GetByIdAsync(cachedEvent.Id);
+
+        Assert.Equal(cachedEvent.Id, result.Id);
+        Assert.Equal("Из кеша", result.Title);
+    }
+
+    /// <summary>
+    /// При промахе кеша топ событий загружается из БД и сохраняется в кеше.
+    /// </summary>
+    [Fact]
+    public async Task GetTopAsync_LoadsFromRepositoryAndCachesResult_WhenCacheMisses()
+    {
+        await using var context = CreateContext();
+        var mostPopular = Event.Create("Популярное", null, DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddDays(1).AddHours(1), 10);
+        mostPopular.TryReserveSeats(8);
+        var lessPopular = Event.Create("Менее популярное", null, DateTimeOffset.UtcNow.AddDays(2), DateTimeOffset.UtcNow.AddDays(2).AddHours(1), 10);
+        lessPopular.TryReserveSeats(3);
+        context.Events.AddRange(mostPopular, lessPopular);
+        await context.SaveChangesAsync();
+        var cache = new TestCache();
+        var service = new EventService(new EventRepository(context), cache);
+
+        var result = await service.GetTopAsync();
+
+        Assert.Equal(["Популярное", "Менее популярное"], result.Select(item => item.Title));
+        Assert.NotNull(cache.GetValue("events:top10"));
     }
 
     /// <summary>
