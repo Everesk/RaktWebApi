@@ -140,6 +140,34 @@ public sealed class EventServiceTests
     }
 
     /// <summary>
+    /// Изменение обновляет кеш, а удаление удаляет ключ только после сохранения в БД.
+    /// </summary>
+    [Fact]
+    public async Task WriteOperations_UpdateAndRemoveEventCache()
+    {
+        await using var context = CreateContext();
+        var cache = new TestCache();
+        var service = new EventService(new EventRepository(context), cache, new CacheOptions());
+        var created = await service.CreateAsync(CreateCommand("Исходное"));
+
+        await service.UpdateAsync(
+            created.Id,
+            new UpdateEventDto
+            {
+                Title = "Обновлённое",
+                StartAt = DateTimeOffset.UtcNow.AddDays(3),
+                EndAt = DateTimeOffset.UtcNow.AddDays(3).AddHours(1)
+            });
+        var cachedEvent = JsonSerializer.Deserialize<EventInfoDto>(cache.GetValue($"event:{created.Id}")!);
+
+        Assert.Equal("Обновлённое", cachedEvent!.Title);
+
+        await service.DeleteAsync(created.Id);
+
+        Assert.Null(cache.GetValue($"event:{created.Id}"));
+    }
+
+    /// <summary>
     /// Создаёт команду события с корректным временным интервалом.
     /// </summary>
     private static CreateEventDto CreateCommand(string title, int totalSeats = 1)

@@ -10,7 +10,7 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
     {
         ct.ThrowIfCancellationRequested();
         var result = await events.GetAllAsync(query, ct);
-        return new PaginatedResult<EventInfoDto> { TotalCount = result.TotalCount, Items = result.Items.Select(ToDto).ToList(), Page = result.Page, PageSize = result.PageSize, CurrentCount = result.CurrentCount };
+        return new PaginatedResult<EventInfoDto> { TotalCount = result.TotalCount, Items = result.Items.Select(EventInfoDto.FromEntity).ToList(), Page = result.Page, PageSize = result.PageSize, CurrentCount = result.CurrentCount };
     }
     /// <inheritdoc />
     public async Task<EventInfoDto> GetByIdAsync(Guid id, CancellationToken ct = default)
@@ -24,8 +24,8 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
         }
 
         var entity = await events.GetAsync(id, ct) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
-        var result = ToDto(entity);
-        await cache.SetAsync(cacheKey, JsonSerializer.Serialize(result), GetCacheTimeToLive());
+        var result = EventInfoDto.FromEntity(entity);
+        await UpdateEventCacheAsync(result);
 
         return result;
     }
@@ -41,7 +41,7 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
             return cachedEvents;
         }
 
-        var result = (await events.GetTopAsync(ct)).Select(ToDto).ToList();
+        var result = (await events.GetTopAsync(ct)).Select(EventInfoDto.FromEntity).ToList();
         await cache.SetAsync(cacheKey, JsonSerializer.Serialize(result), GetCacheTimeToLive());
 
         return result;
@@ -53,7 +53,10 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
         var entity = Event.Create(dto.Title, dto.Description, dto.StartAt!.Value, dto.EndAt!.Value, dto.TotalSeats!.Value);
         await events.AddAsync(entity, ct);
         await events.SaveChangesAsync(ct);
-        return ToDto(entity);
+        var result = EventInfoDto.FromEntity(entity);
+        await UpdateEventCacheAsync(result);
+
+        return result;
     }
     /// <inheritdoc />
     public async Task UpdateAsync(Guid id, UpdateEventDto dto, CancellationToken ct = default)
@@ -62,6 +65,7 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
         var entity = await events.GetForUpdateAsync(id, ct) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
         entity.Update(dto.Title, dto.Description, dto.StartAt!.Value, dto.EndAt!.Value);
         await events.SaveChangesAsync(ct);
+        await UpdateEventCacheAsync(EventInfoDto.FromEntity(entity));
     }
     /// <inheritdoc />
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
@@ -70,6 +74,7 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
         var entity = await events.GetForUpdateAsync(id, ct) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
         await events.DeleteAsync(entity, ct);
         await events.SaveChangesAsync(ct);
+        await cache.RemoveAsync($"event:{id}");
     }
 
     /// <summary>
@@ -99,5 +104,9 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
     /// </summary>
     private TimeSpan GetCacheTimeToLive() => TimeSpan.FromMinutes(cacheOptions.TimeToLiveMinutes);
 
-    private static EventInfoDto ToDto(Event entity) => new() { Id = entity.Id, Title = entity.Title, Description = entity.Description, StartAt = entity.StartAt, EndAt = entity.EndAt, TotalSeats = entity.TotalSeats, AvailableSeats = entity.AvailableSeats, IsFull = entity.IsFull };
+    /// <summary>
+    /// Обновляет кеш актуальными данными события после сохранения в базе данных.
+    /// </summary>
+    private Task UpdateEventCacheAsync(EventInfoDto eventInfo) =>
+        cache.SetAsync($"event:{eventInfo.Id}", JsonSerializer.Serialize(eventInfo), GetCacheTimeToLive());
 }

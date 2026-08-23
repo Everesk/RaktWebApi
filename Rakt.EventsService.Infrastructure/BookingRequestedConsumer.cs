@@ -16,6 +16,8 @@ namespace Rakt.EventsService.Infrastructure;
 public sealed class BookingRequestedConsumer(
     IServiceScopeFactory scopeFactory,
     IOptions<KafkaOptions> options,
+    ICache cache,
+    CacheOptions cacheOptions,
     ILogger<BookingRequestedConsumer> logger) : BackgroundService
 {
     /// <summary>
@@ -144,6 +146,7 @@ public sealed class BookingRequestedConsumer(
             BookingSeatReservation.CreateReserved(request.BookingId, request.EventId),
             cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
+        await UpdateEventCacheAsync(eventEntity);
         await publisher.PublishAsync(
             new SeatsReserved(request.BookingId, request.EventId, DateTimeOffset.UtcNow),
             cancellationToken);
@@ -152,4 +155,13 @@ public sealed class BookingRequestedConsumer(
             request.EventId,
             request.BookingId);
     }
+
+    /// <summary>
+    /// Обновляет кеш события после успешного резервирования места в базе данных.
+    /// </summary>
+    private Task UpdateEventCacheAsync(Event eventEntity) =>
+        cache.SetAsync(
+            $"event:{eventEntity.Id}",
+            JsonSerializer.Serialize(EventInfoDto.FromEntity(eventEntity)),
+            TimeSpan.FromMinutes(cacheOptions.TimeToLiveMinutes));
 }
