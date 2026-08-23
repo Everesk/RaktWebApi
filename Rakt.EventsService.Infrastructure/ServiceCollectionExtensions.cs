@@ -13,7 +13,13 @@ public static class ServiceCollectionExtensions
         services.AddDbContext<EventsDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("EventsDatabase")));
         services.AddSingleton<IConnectionMultiplexer>(_ =>
-            ConnectionMultiplexer.Connect(configuration.GetConnectionString("Redis")!));
+        {
+            var options = ConfigurationOptions.Parse(configuration.GetConnectionString("Redis")!);
+            options.AbortOnConnectFail = false;
+
+            return ConnectionMultiplexer.Connect(options);
+        });
+        services.AddSingleton<ICache, RedisCache>();
         services.AddOptions<KafkaOptions>()
             .Bind(configuration.GetSection(KafkaOptions.SectionName))
             .ValidateDataAnnotations()
