@@ -82,7 +82,7 @@ Events сохраняет состояние обработки по `BookingId`
 
 ### 1. Поднять инфраструктуру
 
-Docker Compose запускает только Kafka, ZooKeeper и три PostgreSQL-базы; сами сервисы запускаются через `dotnet run`.
+Docker Compose запускает Redis, Kafka, ZooKeeper и три PostgreSQL-базы; сами сервисы запускаются через `dotnet run`.
 
 ```bash
 docker compose up -d

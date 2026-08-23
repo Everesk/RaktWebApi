@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Npgsql;
+using StackExchange.Redis;
 
 namespace Rakt.E2ETests;
 
@@ -11,6 +12,7 @@ public sealed class MicroservicesE2eFixture : IAsyncLifetime
     private const string UsersConnectionString = "Host=localhost;Port=5434;Database=rakt_users;Username=postgres;Password=postgres";
     private const string EventsConnectionString = "Host=localhost;Port=5435;Database=rakt_events;Username=postgres;Password=postgres";
     private const string BookingsConnectionString = "Host=localhost;Port=5436;Database=rakt_bookings;Username=postgres;Password=postgres";
+    private const string RedisConnectionString = "localhost:6379";
     private readonly List<Process> _processes = [];
 
     /// <summary>
@@ -33,6 +35,7 @@ public sealed class MicroservicesE2eFixture : IAsyncLifetime
     /// </summary>
     public async Task InitializeAsync()
     {
+        await ResetRedisAsync();
         await ResetDatabaseAsync(UsersConnectionString);
         await ResetDatabaseAsync(EventsConnectionString);
         await ResetDatabaseAsync(BookingsConnectionString);
@@ -75,6 +78,10 @@ public sealed class MicroservicesE2eFixture : IAsyncLifetime
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        if (projectPath.Contains("Rakt.EventsService.Presentation", StringComparison.Ordinal))
+        {
+            startInfo.Environment["Redis__ConnectionString"] = RedisConnectionString;
+        }
         var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException($"Не удалось запустить сервис {projectPath}.");
 
@@ -123,6 +130,28 @@ public sealed class MicroservicesE2eFixture : IAsyncLifetime
         command.CommandText = "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;";
 
         await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Очищает Redis перед запуском сквозных тестов.
+    /// </summary>
+    private static async Task ResetRedisAsync()
+    {
+        using var connection = await ConnectionMultiplexer.ConnectAsync(RedisConnectionString);
+        await connection.GetDatabase().ExecuteAsync("FLUSHDB");
+    }
+
+    /// <summary>
+    /// Возвращает значение Redis по указанному ключу для проверки сквозного сценария.
+    /// </summary>
+    /// <param name="key">Ключ кеша.</param>
+    /// <returns>Значение или <see langword="null"/>, если ключ отсутствует.</returns>
+    public async Task<string?> GetRedisValueAsync(string key)
+    {
+        using var connection = await ConnectionMultiplexer.ConnectAsync(RedisConnectionString);
+        var value = await connection.GetDatabase().StringGetAsync(key);
+
+        return value.HasValue ? value.ToString() : null;
     }
 
     /// <summary>
