@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Rakt.EventsService.Application;
+using StackExchange.Redis;
 namespace Rakt.EventsService.Infrastructure;
 /// <summary>Расширения для регистрации infrastructure-слоя событий.</summary>
 public static class ServiceCollectionExtensions
@@ -11,6 +12,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddDbContext<EventsDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("EventsDatabase")));
+        services.AddSingleton<IConnectionMultiplexer>(_ =>
+            ConnectionMultiplexer.Connect(configuration.GetConnectionString("Redis")!));
         services.AddOptions<KafkaOptions>()
             .Bind(configuration.GetSection(KafkaOptions.SectionName))
             .ValidateDataAnnotations()
