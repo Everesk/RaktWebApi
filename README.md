@@ -1,6 +1,6 @@
 # Rakt — микросервисная система событий и бронирований
 
-Учебный проект, спринты 1–10. Система на .NET 9 разделена на независимые сервисы пользователей, событий и бронирований. Каждый сервис использует чистую архитектуру и собственную PostgreSQL-базу; обмен между сервисами выполняется только через Kafka.
+Учебный проект, спринты 1–11. Система на .NET 9 разделена на независимые сервисы пользователей, событий и бронирований. Каждый сервис использует чистую архитектуру и собственную PostgreSQL-базу; обмен между сервисами выполняется только через Kafka.
 
 ## Возможности
 
@@ -125,6 +125,53 @@ Swagger доступен в Development-режиме:
 - `https://localhost:7133/swagger` — Bookings.
 
 Health endpoints: `/health` на каждом сервисе.
+
+## Наблюдаемость
+
+Во все три сервиса добавлен OpenTelemetry: автоматически собираются трейсы входящих ASP.NET Core-запросов, исходящих HTTP-запросов и SQL-запросов Entity Framework Core. Трейсы экспортируются в Jaeger по OTLP. Метрики HTTP и .NET Runtime экспортируются для Prometheus на endpoint `/metrics`. Serilog выводит структурированные логи в компактном JSON-формате.
+
+Docker Compose также запускает инструменты наблюдаемости:
+
+| Инструмент | Назначение | Адрес |
+| --- | --- | --- |
+| Prometheus | сбор и запросы метрик | http://localhost:9090 |
+| Jaeger | просмотр распределённых трейсов | http://localhost:16686 |
+| Grafana | дашборд технических метрик | http://localhost:3000 |
+
+Для Grafana используются учётные данные `admin` / `admin`. Datasource Prometheus и дашборд `Rakt — Technical Observability` создаются автоматически через provisioning. Экспортированный JSON дашборда хранится в `grafana/dashboards/rakt-services.json`.
+
+### Два набора конфигурации Prometheus
+
+В репозитории есть две конфигурации, чтобы не менять targets вручную между локальной отладкой и контейнерным запуском:
+
+- `prometheus.yml` — publish-конфигурация. Она обращается к API по DNS-именам Docker Compose: `events-service:8080`, `bookings-service:8080`, `users-service:8080`.
+- `prometheus.debug.yml` — конфигурация для запуска API через F5 или `dotnet run`. Она использует HTTPS-адреса из `launchSettings.json` через `host.docker.internal` и отключает проверку локального development-сертификата.
+
+Для локальной отладки поднимите стек мониторинга debug-командой, затем запустите три API с HTTPS-профилем:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d
+```
+
+Для publish-конфигурации используется обычная команда:
+
+```bash
+docker compose up -d
+```
+
+После запуска откройте Prometheus в разделе `Status → Targets`: там должны отображаться три сервиса со статусом `UP`.
+
+### Дашборд Grafana
+
+Дашборд **Rakt — Technical Observability** находится в папке `Rakt` и содержит переменную `Service`: можно выбрать один, несколько или все сервисы. Данные обновляются каждые 15 секунд.
+
+| Панель | Метрика и расчёт | Назначение |
+| --- | --- | --- |
+| Latency p95 | `http_server_request_duration_seconds_bucket`, `histogram_quantile(0.95, ...)` | Показывает время ответа 95% запросов. |
+| Active requests | `http_server_active_requests` | Показывает текущее число одновременно обрабатываемых HTTP-запросов. |
+| Throughput | `rate(http_server_request_duration_seconds_count[...])` | Показывает пропускную способность в запросах в секунду (RPS). |
+| Error rate (5xx) | Доля запросов с `http_response_status_code=~"5.."` в `http_server_request_duration_seconds_count` | Показывает процент серверных ошибок. |
+| Latency p50 / p99 | `http_server_request_duration_seconds_bucket`, `histogram_quantile(...)` | Позволяет сравнить типичную задержку и редкие медленные ответы. |
 
 ## JWT и роли
 
