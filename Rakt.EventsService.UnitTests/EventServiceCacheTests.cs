@@ -60,6 +60,47 @@ public sealed class EventServiceCacheTests
     }
 
     /// <summary>
+    /// При одновременном промахе кеша только один запрос обращается к репозиторию.
+    /// </summary>
+    [Fact]
+    public async Task GetByIdAsync_CallsRepositoryOnce_WhenConcurrentRequestsMissCache()
+    {
+        var entity = CreateEvent("Событие для параллельного чтения");
+        var cache = new TestCache();
+        var repository = new StubEventRepository
+        {
+            Event = entity,
+            GetAsyncDelay = TimeSpan.FromMilliseconds(100)
+        };
+        var service = CreateService(repository, cache);
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => service.GetByIdAsync(entity.Id)));
+
+        Assert.All(results, result => Assert.Equal(entity.Id, result.Id));
+        Assert.Equal(1, repository.GetAsyncCallCount);
+    }
+
+    /// <summary>
+    /// При одновременном промахе кеша рейтинга только один запрос обращается к репозиторию.
+    /// </summary>
+    [Fact]
+    public async Task GetTopAsync_CallsRepositoryOnce_WhenConcurrentRequestsMissCache()
+    {
+        var cache = new TestCache();
+        var repository = new StubEventRepository
+        {
+            Event = CreateEvent("Событие для рейтинга"),
+            GetTopAsyncDelay = TimeSpan.FromMilliseconds(100)
+        };
+        var service = CreateService(repository, cache);
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => service.GetTopAsync()));
+
+        Assert.All(results, result => Assert.Single(result));
+        Assert.Equal(1, repository.GetTopAsyncCallCount);
+    }
+
+    /// <summary>
     /// Создание и обновление перезаписывают кеш, а удаление удаляет ключ после сохранения в репозитории.
     /// </summary>
     [Fact]
@@ -130,15 +171,29 @@ public sealed class EventServiceCacheTests
         /// <summary>Количество вызовов сохранения изменений.</summary>
         public int SaveChangesCallCount { get; private set; }
 
+        /// <summary>Количество вызовов получения рейтинга событий.</summary>
+        public int GetTopAsyncCallCount { get; private set; }
+
+        /// <summary>Искусственная задержка чтения события.</summary>
+        public TimeSpan GetAsyncDelay { get; init; }
+
+        /// <summary>Искусственная задержка чтения рейтинга событий.</summary>
+        public TimeSpan GetTopAsyncDelay { get; init; }
+
         /// <inheritdoc />
         public Task<PaginatedResult<Event>> GetAllAsync(EventQueryDto query, CancellationToken ct = default) =>
             Task.FromResult(new PaginatedResult<Event> { Items = Event is null ? [] : [Event] });
 
         /// <inheritdoc />
-        public Task<Event?> GetAsync(Guid id, CancellationToken ct = default)
+        public async Task<Event?> GetAsync(Guid id, CancellationToken ct = default)
         {
             GetAsyncCallCount++;
-            return Task.FromResult(Event?.Id == id ? Event : null);
+            if (GetAsyncDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(GetAsyncDelay, ct);
+            }
+
+            return Event?.Id == id ? Event : null;
         }
 
         /// <inheritdoc />
@@ -146,8 +201,16 @@ public sealed class EventServiceCacheTests
             Task.FromResult(Event?.Id == id ? Event : null);
 
         /// <inheritdoc />
-        public Task<IReadOnlyList<Event>> GetTopAsync(CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Event>>(Event is null ? [] : [Event]);
+        public async Task<IReadOnlyList<Event>> GetTopAsync(CancellationToken ct = default)
+        {
+            GetTopAsyncCallCount++;
+            if (GetTopAsyncDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(GetTopAsyncDelay, ct);
+            }
+
+            return Event is null ? [] : [Event];
+        }
 
         /// <inheritdoc />
         public Task<BookingSeatReservation?> GetReservationAsync(Guid bookingId, CancellationToken ct = default) =>

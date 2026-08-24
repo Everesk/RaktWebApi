@@ -1,4 +1,5 @@
 using Rakt.EventsService.Application;
+using System.Collections.Concurrent;
 
 namespace Rakt.EventsService.UnitTests;
 
@@ -7,7 +8,7 @@ namespace Rakt.EventsService.UnitTests;
 /// </summary>
 internal sealed class TestCache : ICache
 {
-    private readonly Dictionary<string, string> values = [];
+    private readonly ConcurrentDictionary<string, string> values = [];
 
     /// <inheritdoc />
     public Task<string?> GetAsync(string key)
@@ -25,7 +26,7 @@ internal sealed class TestCache : ICache
     /// <inheritdoc />
     public Task RemoveAsync(string key)
     {
-        values.Remove(key);
+        values.TryRemove(key, out _);
         return Task.CompletedTask;
     }
 

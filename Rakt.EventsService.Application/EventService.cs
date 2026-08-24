@@ -1,10 +1,14 @@
 using Rakt.EventsService.Domain;
 using Rakt.EventsService.Domain.Exceptions;
+using System.Collections.Concurrent;
 using System.Text.Json;
 namespace Rakt.EventsService.Application;
 /// <summary>Реализует CRUD-сценарии сервиса событий.</summary>
 public sealed class EventService(IEventRepository events, ICache cache, CacheOptions cacheOptions) : IEventService
 {
+    // Синхронизирует прогрев кеша для каждого ключа в пределах экземпляра приложения.
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> CacheLocks = new();
+
     /// <inheritdoc />
     public async Task<PaginatedResult<EventInfoDto>> GetAllAsync(EventQueryDto query, CancellationToken ct = default)
     {
@@ -23,11 +27,26 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
             return cachedEvent;
         }
 
-        var entity = await events.GetAsync(id, ct) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
-        var result = EventInfoDto.FromEntity(entity);
-        await UpdateEventCacheAsync(result);
+        var cacheLock = CacheLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+        await cacheLock.WaitAsync(ct);
+        try
+        {
+            cachedEvent = await GetCachedAsync<EventInfoDto>(cacheKey);
+            if (cachedEvent is not null)
+            {
+                return cachedEvent;
+            }
 
-        return result;
+            var entity = await events.GetAsync(id, ct) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
+            var result = EventInfoDto.FromEntity(entity);
+            await UpdateEventCacheAsync(result);
+
+            return result;
+        }
+        finally
+        {
+            cacheLock.Release();
+        }
     }
 
     /// <inheritdoc />
@@ -41,13 +60,28 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
             return cachedEvents;
         }
 
-        var result = (await events.GetTopAsync(ct)).Select(EventInfoDto.FromEntity).ToList();
-        await cache.SetAsync(
-            cacheKey,
-            JsonSerializer.Serialize(result),
-            GetCacheTimeToLive(cacheOptions.TopEventsTimeToLiveMinutes));
+        var cacheLock = CacheLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+        await cacheLock.WaitAsync(ct);
+        try
+        {
+            cachedEvents = await GetCachedAsync<List<EventInfoDto>>(cacheKey);
+            if (cachedEvents is not null)
+            {
+                return cachedEvents;
+            }
 
-        return result;
+            var result = (await events.GetTopAsync(ct)).Select(EventInfoDto.FromEntity).ToList();
+            await cache.SetAsync(
+                cacheKey,
+                JsonSerializer.Serialize(result),
+                GetCacheTimeToLive(cacheOptions.TopEventsTimeToLiveMinutes));
+
+            return result;
+        }
+        finally
+        {
+            cacheLock.Release();
+        }
     }
     /// <inheritdoc />
     public async Task<EventInfoDto> CreateAsync(CreateEventDto dto, CancellationToken ct = default)
