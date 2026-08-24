@@ -146,7 +146,7 @@ public sealed class BookingRequestedConsumer(
             BookingSeatReservation.CreateReserved(request.BookingId, request.EventId),
             cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
-        await UpdateEventCacheAsync(eventEntity);
+        await EventCacheUpdater.UpdateAsync(cache, cacheOptions, eventEntity);
         await publisher.PublishAsync(
             new SeatsReserved(request.BookingId, request.EventId, DateTimeOffset.UtcNow),
             cancellationToken);
@@ -156,12 +156,4 @@ public sealed class BookingRequestedConsumer(
             request.BookingId);
     }
 
-    /// <summary>
-    /// Обновляет кеш события после успешного резервирования места в базе данных.
-    /// </summary>
-    private Task UpdateEventCacheAsync(Event eventEntity) =>
-        cache.SetAsync(
-            CacheKeys.SingleEvent(eventEntity.Id),
-            JsonSerializer.Serialize(EventInfoDto.FromEntity(eventEntity)),
-            TimeSpan.FromMinutes(cacheOptions.EventTimeToLiveMinutes));
 }
