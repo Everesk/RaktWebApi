@@ -1,0 +1,4 @@
+services:
+  prometheus:
+    command:
+      - --config.file=/etc/prometheus/prometheus.debug.yml
