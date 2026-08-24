@@ -1,6 +1,9 @@
 using Rakt.UsersService.Application;
 using Rakt.UsersService.Infrastructure;
 using Rakt.UsersService.Presentation.Extensions;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -19,10 +22,23 @@ try
     builder.AddJwtAuthentication();
     builder.Services.AddUsersApplication();
     builder.Services.AddUsersInfrastructure(builder.Configuration);
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource => resource.AddService(serviceName: "users-service"))
+        .WithTracing(tracing => tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddEntityFrameworkCoreInstrumentation()
+            .AddOtlpExporter(options =>
+                options.Endpoint = new Uri(builder.Configuration["Otlp:Endpoint"]!)))
+        .WithMetrics(metrics => metrics
+            .AddAspNetCoreInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddPrometheusExporter());
 
     var app = builder.Build();
 
     app.UseStandardConfiguration();
+    app.MapPrometheusScrapingEndpoint();
     app.Run();
 }
 catch (Exception exception)
