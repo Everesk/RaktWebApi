@@ -22,5 +22,5 @@ public sealed class CacheOptions
     /// Количество минут, в течение которых в кеше хранится рейтинг популярных событий.
     /// </summary>
     [Range(1, int.MaxValue)]
-    public int TopEventsTimeToLiveMinutes { get; init; } = 5;
+    public int TopEventsTimeToLiveMinutes { get; init; } = 1;
 }
