@@ -10,6 +10,13 @@ public interface IEventRepository
     Task<Event?> GetForUpdateAsync(Guid id, CancellationToken ct = default);
 
     /// <summary>
+    /// Возвращает не более десяти событий с наибольшей долей проданных мест.
+    /// </summary>
+    /// <param name="ct">Токен отмены операции.</param>
+    /// <returns>События, упорядоченные по убыванию процента проданных мест.</returns>
+    Task<IReadOnlyList<Event>> GetTopAsync(CancellationToken ct = default);
+
+    /// <summary>
     /// Возвращает запись обработки брони по её идентификатору.
     /// </summary>
     Task<BookingSeatReservation?> GetReservationAsync(Guid bookingId, CancellationToken ct = default);

@@ -16,6 +16,8 @@ namespace Rakt.EventsService.Infrastructure;
 public sealed class BookingCancelledConsumer(
     IServiceScopeFactory scopeFactory,
     IOptions<KafkaOptions> options,
+    ICache cache,
+    CacheOptions cacheOptions,
     ILogger<BookingCancelledConsumer> logger) : BackgroundService
 {
     /// <summary>
@@ -130,9 +132,11 @@ public sealed class BookingCancelledConsumer(
 
         eventEntity.ReleaseSeat();
         await repository.SaveChangesAsync(cancellationToken);
+        await EventCacheUpdater.UpdateAsync(cache, cacheOptions, eventEntity);
         logger.LogInformation(
             "Для события {EventId} возвращено место по отмене брони {BookingId}",
             bookingCancelled.EventId,
             bookingCancelled.BookingId);
     }
+
 }

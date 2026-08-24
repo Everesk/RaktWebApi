@@ -6,6 +6,8 @@ public interface IEventService
     Task<PaginatedResult<EventInfoDto>> GetAllAsync(EventQueryDto query, CancellationToken ct = default);
     /// <summary>Возвращает событие.</summary>
     Task<EventInfoDto> GetByIdAsync(Guid id, CancellationToken ct = default);
+    /// <summary>Возвращает десять событий с наибольшей долей проданных мест.</summary>
+    Task<IReadOnlyList<EventInfoDto>> GetTopAsync(CancellationToken ct = default);
     /// <summary>Создаёт событие.</summary>
     Task<EventInfoDto> CreateAsync(CreateEventDto dto, CancellationToken ct = default);
     /// <summary>Обновляет событие.</summary>

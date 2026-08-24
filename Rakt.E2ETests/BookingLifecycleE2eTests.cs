@@ -111,6 +111,75 @@ public sealed class BookingLifecycleE2eTests(MicroservicesE2eFixture fixture)
     }
 
     /// <summary>
+    /// Проверяет полный путь кеша события через HTTP API, Redis и PostgreSQL.
+    /// </summary>
+    [Fact]
+    public async Task EventCache_UpdatesAfterWriteAndIsRemovedAfterDelete()
+    {
+        var administratorToken = await CreateUserTokenAsync(role: 1);
+        var eventId = await CreateEventAsync(administratorToken);
+
+        using (var client = new HttpClient { BaseAddress = fixture.EventsBaseAddress })
+        {
+            using var response = await client.GetAsync($"events/{eventId}");
+            response.EnsureSuccessStatusCode();
+            var eventInfo = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+            Assert.Equal("E2E-событие", eventInfo.GetProperty("title").GetString());
+        }
+
+        await WaitUntilAsync(
+            async () => await HasCachedEventTitleAsync(eventId, "E2E-событие"),
+            "Созданное событие не появилось в Redis.");
+
+        using (var client = new HttpClient { BaseAddress = fixture.EventsBaseAddress })
+        {
+            using var response = await client.GetAsync("events/top");
+            response.EnsureSuccessStatusCode();
+        }
+
+        await WaitUntilAsync(
+            async () => await fixture.GetRedisValueAsync("events:top10") is not null,
+            "Рейтинг событий не появился в Redis.");
+
+        using (var client = CreateAuthorizedClient(fixture.EventsBaseAddress, administratorToken))
+        {
+            var startAt = DateTimeOffset.UtcNow.AddDays(2);
+            using var response = await client.PutAsJsonAsync($"events/{eventId}", new
+            {
+                Title = "E2E-событие обновлено",
+                Description = "Проверка обновления кеша",
+                StartAt = startAt,
+                EndAt = startAt.AddHours(2)
+            });
+            response.EnsureSuccessStatusCode();
+        }
+
+        await WaitUntilAsync(
+            async () => await HasCachedEventTitleAsync(eventId, "E2E-событие обновлено"),
+            "Redis не получил обновлённые данные события.");
+
+        using (var client = new HttpClient { BaseAddress = fixture.EventsBaseAddress })
+        {
+            using var response = await client.GetAsync($"events/{eventId}");
+            response.EnsureSuccessStatusCode();
+            var eventInfo = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+            Assert.Equal("E2E-событие обновлено", eventInfo.GetProperty("title").GetString());
+        }
+
+        using (var client = CreateAuthorizedClient(fixture.EventsBaseAddress, administratorToken))
+        {
+            using var response = await client.DeleteAsync($"events/{eventId}");
+            response.EnsureSuccessStatusCode();
+        }
+
+        await WaitUntilAsync(
+            async () => await fixture.GetRedisValueAsync($"event:{eventId}") is null,
+            "Ключ удалённого события остался в Redis.");
+    }
+
+    /// <summary>
     /// Регистрирует пользователя и получает его JWT-токен через публичный API.
     /// </summary>
     private static async Task<string> RegisterAndLoginAsync(
@@ -205,6 +274,21 @@ public sealed class BookingLifecycleE2eTests(MicroservicesE2eFixture fixture)
         var eventInfo = await response.Content.ReadFromJsonAsync<JsonElement>();
 
         return eventInfo.GetProperty("availableSeats").GetInt32();
+    }
+
+    /// <summary>
+    /// Проверяет, что Redis содержит событие с ожидаемым заголовком.
+    /// </summary>
+    private async Task<bool> HasCachedEventTitleAsync(Guid eventId, string expectedTitle)
+    {
+        var cachedValue = await fixture.GetRedisValueAsync($"event:{eventId}");
+        if (cachedValue is null)
+        {
+            return false;
+        }
+
+        using var document = JsonDocument.Parse(cachedValue);
+        return document.RootElement.GetProperty("Title").GetString() == expectedTitle;
     }
 
     /// <summary>
