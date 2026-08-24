@@ -108,7 +108,7 @@ public sealed class EventServiceTests
             AvailableSeats = 5
         };
         var cache = new TestCache();
-        cache.Seed($"event:{cachedEvent.Id}", JsonSerializer.Serialize(cachedEvent));
+        cache.Seed(CacheKeys.SingleEvent(cachedEvent.Id), JsonSerializer.Serialize(cachedEvent));
         var service = new EventService(new EventRepository(context), cache, new CacheOptions());
 
         var result = await service.GetByIdAsync(cachedEvent.Id);
@@ -136,7 +136,7 @@ public sealed class EventServiceTests
         var result = await service.GetTopAsync();
 
         Assert.Equal(["Популярное", "Менее популярное"], result.Select(item => item.Title));
-        Assert.NotNull(cache.GetValue("events:top10"));
+        Assert.NotNull(cache.GetValue(CacheKeys.TopEvents()));
     }
 
     /// <summary>
@@ -158,13 +158,13 @@ public sealed class EventServiceTests
                 StartAt = DateTimeOffset.UtcNow.AddDays(3),
                 EndAt = DateTimeOffset.UtcNow.AddDays(3).AddHours(1)
             });
-        var cachedEvent = JsonSerializer.Deserialize<EventInfoDto>(cache.GetValue($"event:{created.Id}")!);
+        var cachedEvent = JsonSerializer.Deserialize<EventInfoDto>(cache.GetValue(CacheKeys.SingleEvent(created.Id))!);
 
         Assert.Equal("Обновлённое", cachedEvent!.Title);
 
         await service.DeleteAsync(created.Id);
 
-        Assert.Null(cache.GetValue($"event:{created.Id}"));
+        Assert.Null(cache.GetValue(CacheKeys.SingleEvent(created.Id)));
     }
 
     /// <summary>

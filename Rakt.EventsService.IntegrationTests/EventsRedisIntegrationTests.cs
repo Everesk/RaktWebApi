@@ -80,7 +80,7 @@ public sealed class EventsRedisIntegrationTests(
                 StartAt = startAt.AddDays(1),
                 EndAt = startAt.AddDays(1).AddHours(1)
             });
-        var cachedValue = await cache.GetAsync($"event:{created.Id}");
+        var cachedValue = await cache.GetAsync(CacheKeys.SingleEvent(created.Id));
         var cachedEvent = JsonSerializer.Deserialize<EventInfoDto>(cachedValue!);
 
         Assert.Equal("Обновлённое событие", cachedEvent!.Title);

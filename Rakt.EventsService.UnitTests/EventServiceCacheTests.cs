@@ -20,7 +20,7 @@ public sealed class EventServiceCacheTests
         var eventId = Guid.NewGuid();
         var cache = new TestCache();
         cache.Seed(
-            $"event:{eventId}",
+            CacheKeys.SingleEvent(eventId),
             JsonSerializer.Serialize(new EventInfoDto
             {
                 Id = eventId,
@@ -51,7 +51,7 @@ public sealed class EventServiceCacheTests
         var service = CreateService(repository, cache);
 
         var result = await service.GetByIdAsync(entity.Id);
-        var cachedEvent = JsonSerializer.Deserialize<EventInfoDto>(cache.GetValue($"event:{entity.Id}")!);
+        var cachedEvent = JsonSerializer.Deserialize<EventInfoDto>(cache.GetValue(CacheKeys.SingleEvent(entity.Id))!);
 
         Assert.Equal(entity.Id, result.Id);
         Assert.Equal(1, repository.GetAsyncCallCount);
@@ -77,7 +77,7 @@ public sealed class EventServiceCacheTests
             EndAt = startAt.AddHours(1),
             TotalSeats = 10
         });
-        var cachedAfterCreate = JsonSerializer.Deserialize<EventInfoDto>(cache.GetValue($"event:{created.Id}")!);
+        var cachedAfterCreate = JsonSerializer.Deserialize<EventInfoDto>(cache.GetValue(CacheKeys.SingleEvent(created.Id))!);
 
         Assert.Equal(1, repository.SaveChangesCallCount);
         Assert.Equal("Исходное", cachedAfterCreate!.Title);
@@ -90,7 +90,7 @@ public sealed class EventServiceCacheTests
                 StartAt = startAt.AddDays(1),
                 EndAt = startAt.AddDays(1).AddHours(1)
             });
-        var cachedAfterUpdate = JsonSerializer.Deserialize<EventInfoDto>(cache.GetValue($"event:{created.Id}")!);
+        var cachedAfterUpdate = JsonSerializer.Deserialize<EventInfoDto>(cache.GetValue(CacheKeys.SingleEvent(created.Id))!);
 
         Assert.Equal(2, repository.SaveChangesCallCount);
         Assert.Equal("Обновлённое", cachedAfterUpdate!.Title);
@@ -98,7 +98,7 @@ public sealed class EventServiceCacheTests
         await service.DeleteAsync(created.Id);
 
         Assert.Equal(3, repository.SaveChangesCallCount);
-        Assert.Null(cache.GetValue($"event:{created.Id}"));
+        Assert.Null(cache.GetValue(CacheKeys.SingleEvent(created.Id)));
     }
 
     /// <summary>

@@ -161,7 +161,7 @@ public sealed class BookingRequestedConsumer(
     /// </summary>
     private Task UpdateEventCacheAsync(Event eventEntity) =>
         cache.SetAsync(
-            $"event:{eventEntity.Id}",
+            CacheKeys.SingleEvent(eventEntity.Id),
             JsonSerializer.Serialize(EventInfoDto.FromEntity(eventEntity)),
             TimeSpan.FromMinutes(cacheOptions.EventTimeToLiveMinutes));
 }

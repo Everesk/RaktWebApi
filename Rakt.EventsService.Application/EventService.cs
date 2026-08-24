@@ -16,7 +16,7 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
     public async Task<EventInfoDto> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        var cacheKey = $"event:{id}";
+        var cacheKey = CacheKeys.SingleEvent(id);
         var cachedEvent = await GetCachedAsync<EventInfoDto>(cacheKey);
         if (cachedEvent is not null)
         {
@@ -34,7 +34,7 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
     public async Task<IReadOnlyList<EventInfoDto>> GetTopAsync(CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        const string cacheKey = "events:top10";
+        var cacheKey = CacheKeys.TopEvents();
         var cachedEvents = await GetCachedAsync<List<EventInfoDto>>(cacheKey);
         if (cachedEvents is not null)
         {
@@ -77,7 +77,7 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
         var entity = await events.GetForUpdateAsync(id, ct) ?? throw new NotFoundException($"Событие с идентификатором '{id}' не найдено.");
         await events.DeleteAsync(entity, ct);
         await events.SaveChangesAsync(ct);
-        await cache.RemoveAsync($"event:{id}");
+        await cache.RemoveAsync(CacheKeys.SingleEvent(id));
     }
 
     /// <summary>
@@ -112,7 +112,7 @@ public sealed class EventService(IEventRepository events, ICache cache, CacheOpt
     /// </summary>
     private Task UpdateEventCacheAsync(EventInfoDto eventInfo) =>
         cache.SetAsync(
-            $"event:{eventInfo.Id}",
+            CacheKeys.SingleEvent(eventInfo.Id),
             JsonSerializer.Serialize(eventInfo),
             GetCacheTimeToLive(cacheOptions.EventTimeToLiveMinutes));
 }
