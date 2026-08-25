@@ -2,10 +2,11 @@ using Rakt.EventsService.Application;
 using Rakt.EventsService.Infrastructure;
 using Rakt.EventsService.Presentation.Extensions;
 using Serilog;
+using Serilog.Formatting.Compact;
 
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
-    .WriteTo.Console()
+    .WriteTo.Console(new CompactJsonFormatter())
     .CreateBootstrapLogger();
 
 try
@@ -19,10 +20,12 @@ try
     builder.AddJwtAuthentication();
     builder.Services.AddEventsApplication();
     builder.Services.AddEventsInfrastructure(builder.Configuration);
+    builder.AddTelemetry();
 
     var app = builder.Build();
 
     app.UseStandardConfiguration();
+    app.MapTelemetryEndpoints();
     app.Run();
 }
 catch (Exception exception)

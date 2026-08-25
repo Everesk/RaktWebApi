@@ -3,12 +3,36 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
-using Serilog.Events;
+using Serilog.Formatting.Compact;
 namespace Rakt.EventsService.Presentation.Extensions;
 /// <summary>Расширения для стандартной настройки построителя API событий.</summary>
 public static class WebApplicationBuilderExtensions
 {
+    /// <summary>Регистрирует сбор и экспорт трейсов и метрик сервиса событий.</summary>
+    public static WebApplicationBuilder AddTelemetry(this WebApplicationBuilder builder)
+    {
+        var otlpEndpoint = builder.Configuration["Otlp:Endpoint"]
+            ?? throw new InvalidOperationException("Не задан endpoint OTLP.");
+
+        builder.Services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService(serviceName: "events-service"))
+            .WithTracing(tracing => tracing
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddEntityFrameworkCoreInstrumentation()
+                .AddOtlpExporter(options => options.Endpoint = new Uri(otlpEndpoint)))
+            .WithMetrics(metrics => metrics
+                .AddAspNetCoreInstrumentation()
+                .AddRuntimeInstrumentation()
+                .AddPrometheusExporter());
+
+        return builder;
+    }
+
     /// <summary>Регистрирует JWT-аутентификацию и авторизацию.</summary>
     public static WebApplicationBuilder AddJwtAuthentication(this WebApplicationBuilder builder)
     {
@@ -81,25 +105,13 @@ public static class WebApplicationBuilderExtensions
         });
     }
 
-    /// <summary>Настраивает Serilog для консоли и ежедневных файлов журналов.</summary>
+    /// <summary>Настраивает Serilog с JSON-логами в консоли.</summary>
     public static WebApplicationBuilder AddSerilogLogging(this WebApplicationBuilder builder)
     {
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
-            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+        builder.Host.UseSerilog((context, configuration) => configuration
+            .ReadFrom.Configuration(context.Configuration)
             .Enrich.FromLogContext()
-            .WriteTo.Console()
-            .WriteTo.File(
-                path: "logs/log-.txt",
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 7,
-                fileSizeLimitBytes: 10_000_000,
-                rollOnFileSizeLimit: true,
-                shared: true)
-            .CreateLogger();
-
-        builder.Host.UseSerilog();
+            .WriteTo.Console(new CompactJsonFormatter()));
 
         return builder;
     }
