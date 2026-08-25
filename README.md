@@ -176,6 +176,9 @@ docker compose up -d
 | Throughput | `rate(http_server_request_duration_seconds_count[...])` | Показывает пропускную способность в запросах в секунду (RPS). |
 | Error rate (5xx) | Доля запросов с `http_response_status_code=~"5.."` в `http_server_request_duration_seconds_count` | Показывает процент серверных ошибок. |
 | Latency p50 / p99 | `http_server_request_duration_seconds_bucket`, `histogram_quantile(...)` | Позволяет сравнить типичную задержку и редкие медленные ответы. |
+| .NET GC heap size | `dotnet_gc_last_collection_heap_size_bytes` для Gen2, LOH и POH | Показывает размер долгоживущей и большой памяти, занятой управляемой кучей. |
+| .NET ThreadPool queue length | `dotnet_thread_pool_queue_length_total` | Показывает количество ожидающих задач ThreadPool. |
+| .NET ThreadPool thread count | `dotnet_thread_pool_thread_count_total` | Показывает число рабочих потоков ThreadPool. |
 
 ## JWT и роли
 
