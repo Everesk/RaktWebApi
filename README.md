@@ -82,11 +82,15 @@ Events сохраняет состояние обработки по `BookingId`
 
 ### 1. Поднять инфраструктуру
 
-Docker Compose запускает Redis, Kafka, ZooKeeper и три PostgreSQL-базы; сами сервисы запускаются через `dotnet run`.
+Docker Compose запускает Redis, Kafka, ZooKeeper, три PostgreSQL-базы и стек наблюдаемости: Prometheus, Jaeger и Grafana. Сами API-сервисы запускаются через `dotnet run`.
+
+Для локального запуска API через F5 или `dotnet run` используйте debug-конфигурацию Compose: она настраивает Prometheus на HTTPS-адреса из `launchSettings.json`.
 
 ```bash
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d
 ```
+
+Обычная команда `docker compose up -d` использует publish-конфигурацию Prometheus, в которой targets заданы DNS-именами контейнеров API.
 
 Проверить контейнеры:
 
