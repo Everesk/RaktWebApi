@@ -3,12 +3,36 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Formatting.Compact;
 namespace Rakt.BookingsService.Presentation.Extensions;
 /// <summary>Расширения для стандартной настройки построителя API броней.</summary>
 public static class WebApplicationBuilderExtensions
 {
+    /// <summary>Регистрирует сбор и экспорт трейсов и метрик сервиса броней.</summary>
+    public static WebApplicationBuilder AddTelemetry(this WebApplicationBuilder builder)
+    {
+        var otlpEndpoint = builder.Configuration["Otlp:Endpoint"]
+            ?? throw new InvalidOperationException("Не задан endpoint OTLP.");
+
+        builder.Services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService(serviceName: "bookings-service"))
+            .WithTracing(tracing => tracing
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddEntityFrameworkCoreInstrumentation()
+                .AddOtlpExporter(options => options.Endpoint = new Uri(otlpEndpoint)))
+            .WithMetrics(metrics => metrics
+                .AddAspNetCoreInstrumentation()
+                .AddRuntimeInstrumentation()
+                .AddPrometheusExporter());
+
+        return builder;
+    }
+
     /// <summary>Регистрирует JWT-аутентификацию и авторизацию.</summary>
     public static WebApplicationBuilder AddJwtAuthentication(this WebApplicationBuilder builder)
     {

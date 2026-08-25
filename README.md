@@ -157,7 +157,7 @@ Docker Compose также запускает инструменты наблюд
 docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d
 ```
 
-Для publish-конфигурации используется обычная команда:
+Для publish-конфигурации используется обычная команда. Этот режим рассчитан на развёртывание, в котором API-сервисы также добавлены в Docker Compose под именами `events-service`, `bookings-service` и `users-service`; в текущем Compose API запускаются на хосте через `dotnet run`, поэтому для локальной разработки используйте debug-команду выше.
 
 ```bash
 docker compose up -d
